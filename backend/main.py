@@ -7,6 +7,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure the SQLAlchemy database URI using the environment variable from the .env file.
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # This function is the entry point for the Flask application. It defines a route for the root URL and returns a simple Hello, World!
