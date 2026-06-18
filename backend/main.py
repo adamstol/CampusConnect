@@ -1,7 +1,10 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
+from extensions import db
+from auth.routes import auth_bp
 
 load_dotenv()
 
@@ -11,7 +14,17 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+
+
+db.init_app(app)
+jwt = JWTManager(app)
+
+app.register_blueprint(auth_bp)
+
+with app.app_context():
+    db.create_all()
 
 # This function is the entry point for the Flask application. It defines a route for the root URL and returns a simple Hello, World!
 @app.route('/')
