@@ -70,6 +70,7 @@ def verify_email():
         return jsonify({'message': 'Token expired'}), 400
 
     user.is_email_verified = True
+    user.is_account_enabled = True
     user.email_verification_token = None
     user.email_verification_token_expires_at = None
     db.session.commit()
