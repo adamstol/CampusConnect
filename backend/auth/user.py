@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from main import db
+from extensions import db
 
 
 class User(db.Model):
