@@ -50,6 +50,19 @@
 - `POST /auth/reset-password` — reset the user's password using a valid reset token; unlocks the account if it was locked
 - `DELETE /auth/delete` — *(Bearer Token required)* permanently delete the authenticated user's account
 
+### Club Endpoints
+
+- `POST /clubs/` — *(Bearer Token required)* create a new club with a name and optional description; the authenticated user is automatically added as a member
+- `GET /clubs/` — *(Bearer Token required)* return a list of all clubs
+- `GET /clubs/{club_id}` — *(Bearer Token required)* return details of a specific club by ID
+- `PATCH /clubs/{club_id}` — *(Bearer Token required)* update a club's name and/or description; only accessible to members of the club
+- `DELETE /clubs/{club_id}` — *(Bearer Token required)* permanently delete a club; only accessible to members of the club
+- `POST /clubs/{club_id}/join` — *(Bearer Token required)* join the specified club as a member
+- `POST /clubs/{club_id}/leave` — *(Bearer Token required)* leave the specified club
+- `GET /clubs/{club_id}/members` — *(Bearer Token required)* return a list of all members of the specified club
+- `GET /clubs/my-clubs` — *(Bearer Token required)* return all clubs the authenticated user is a member of
+- `GET /clubs/my-managed-clubs` — *(Bearer Token required)* return all clubs the authenticated user created/manages
+
 ## Frontend Setup
 
 ### Prerequisites
