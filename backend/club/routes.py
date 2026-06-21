@@ -16,6 +16,7 @@ An Admin or Club Representative can create many clubs, but each club can only ha
 def create_club():
     
     #Get the JSON and JWT identity to identify the user creating the club.
+    current_user_id = get_jwt_identity()
     data = request.get_json()
     club_name = data.get('club_name')
     description = data.get('description')
@@ -44,6 +45,7 @@ def create_club():
 def get_clubs():
     
     # Query all clubs and return their details in a JSON format.
+    clubs = Club.query.all()
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
 
@@ -54,6 +56,7 @@ def get_clubs():
 def get_club(club_id):
     
     # Query the club by ID and return its details in a JSON format. 
+    club = Club.query.get(club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
