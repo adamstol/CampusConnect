@@ -11,4 +11,4 @@ class Club(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     def __repr__(self):
-        return f'<Club {self.name}>'
+        return f'<Club {self.club_name}>'
