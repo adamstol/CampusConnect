@@ -5,6 +5,7 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 from extensions import db
 from auth.routes import auth_bp
+from club.routes import club_bp
 
 load_dotenv()
 
@@ -25,6 +26,7 @@ jwt = JWTManager(app)
 
 # Register the authentication blueprint with the Flask app
 app.register_blueprint(auth_bp)
+app.register_blueprint(club_bp)
 
 # Create the database tables if they don't exist
 with app.app_context():
