@@ -56,7 +56,7 @@ def get_clubs():
 def get_club(club_id):
     
     # Query the club by ID and return its details in a JSON format. 
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
@@ -70,7 +70,7 @@ def update_club(club_id):
     
     # Get the JWT idenetity and query the club by ID.
     current_user_id = int(get_jwt_identity())
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
@@ -98,7 +98,7 @@ def delete_club(club_id):
     
     # Get the JWT identity and query the club by ID. 
     current_user_id = int(get_jwt_identity())
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
@@ -118,7 +118,7 @@ def join_club(club_id):
     
     # Get the JWT identity and query the club by ID.
     current_user_id = int(get_jwt_identity())
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
@@ -139,7 +139,7 @@ def leave_club(club_id):
     
     # Get the JWT identity and query the club by ID. 
     current_user_id = int(get_jwt_identity())
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
@@ -158,7 +158,7 @@ def leave_club(club_id):
 @jwt_required()
 def get_club_members(club_id):
     # Query the club by ID and return a list of its members in a JSON format.
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
