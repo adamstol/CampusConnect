@@ -47,7 +47,7 @@ def register():
     #Some Code, but for now, we'll just get the token via postman, and implement when we have a frontend
     
     return jsonify({
-        'message': 'Registered. Please verify your email.',
+        'message': 'Successfully Registered. Please verify your email.',
         'debug_verification_token': token
     }), 201
 
