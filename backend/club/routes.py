@@ -16,7 +16,7 @@ An Admin or Club Representative can create many clubs, but each club can only ha
 def create_club():
     
     #Get the JSON and JWT identity to identify the user creating the club.
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     data = request.get_json()
     club_name = data.get('club_name')
     description = data.get('description')
@@ -69,7 +69,7 @@ def get_club(club_id):
 def update_club(club_id):
     
     # Get the JWT idenetity and query the club by ID.
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     club = Club.query.get(club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
@@ -97,7 +97,7 @@ def update_club(club_id):
 def delete_club(club_id):
     
     # Get the JWT identity and query the club by ID. 
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     club = Club.query.get(club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
@@ -117,7 +117,7 @@ def delete_club(club_id):
 def join_club(club_id):
     
     # Get the JWT identity and query the club by ID.
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     club = Club.query.get(club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
@@ -138,7 +138,7 @@ def join_club(club_id):
 def leave_club(club_id):
     
     # Get the JWT identity and query the club by ID. 
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     club = Club.query.get(club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
@@ -172,7 +172,7 @@ def get_club_members(club_id):
 def get_my_clubs():
     
     # Get the JWT identity and query the UserClub table for all clubs the user is a member of
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     memberships = UserClub.query.filter_by(user_id=current_user_id).all()
     clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name, 'joined_at': membership.joined_at.isoformat()} for membership in memberships]
     return jsonify(clubs), 200
@@ -183,7 +183,7 @@ def get_my_clubs():
 @jwt_required()
 def get_my_managed_clubs():
     # Get the JWT identity and query the UserClub table for all clubs the user is managing
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     memberships = UserClub.query.filter_by(user_id=current_user_id).all()
     managed_clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name} for membership in memberships]
     return jsonify(managed_clubs), 200
