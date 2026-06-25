@@ -32,7 +32,7 @@ def create_club():
     db.session.add(new_club)
     db.session.commit()
 
-    user_club = UserClub(user_id=current_user_id, club_id=new_club.club_id)
+    user_club = UserClub(user_id=current_user_id, club_id=new_club.club_id, role='admin')
     db.session.add(user_club)
     db.session.commit()
 
@@ -75,8 +75,8 @@ def update_club(club_id):
         return jsonify({'message': 'Club not found'}), 404
 
     user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=club_id).first()
-    if not user_club:
-        return jsonify({'message': 'Unauthorized'}), 403
+    if not user_club or user_club.role not in ['admin', 'representative']:
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can perform this action'}), 403
 
     data = request.get_json()
     if 'club_name' in data:
@@ -103,8 +103,8 @@ def delete_club(club_id):
         return jsonify({'message': 'Club not found'}), 404
 
     user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=club_id).first()
-    if not user_club:
-        return jsonify({'message': 'Unauthorized'}), 403
+    if not user_club or user_club.role not in ['admin', 'representative']:
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can perform this action'}), 403
 
     db.session.delete(club)
     db.session.commit()
@@ -162,7 +162,7 @@ def get_club_members(club_id):
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
-    members = [{'user_id': membership.user_id, 'joined_at': membership.joined_at.isoformat()} for membership in club.user_clubs]
+    members = [{'user_id': membership.user_id, 'role': membership.role, 'joined_at': membership.joined_at.isoformat()} for membership in club.user_clubs]
     return jsonify(members), 200
 
 
@@ -174,7 +174,7 @@ def get_my_clubs():
     # Get the JWT identity and query the UserClub table for all clubs the user is a member of
     current_user_id = int(get_jwt_identity())
     memberships = UserClub.query.filter_by(user_id=current_user_id).all()
-    clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name, 'joined_at': membership.joined_at.isoformat()} for membership in memberships]
+    clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name, 'role': membership.role, 'joined_at': membership.joined_at.isoformat()} for membership in memberships]
     return jsonify(clubs), 200
 
 
@@ -184,6 +184,6 @@ def get_my_clubs():
 def get_my_managed_clubs():
     # Get the JWT identity and query the UserClub table for all clubs the user is managing
     current_user_id = int(get_jwt_identity())
-    memberships = UserClub.query.filter_by(user_id=current_user_id).all()
-    managed_clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name} for membership in memberships]
+    memberships = UserClub.query.filter_by(user_id=current_user_id).filter(UserClub.role.in_(['admin', 'representative'])).all()
+    managed_clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name, 'role': membership.role} for membership in memberships]
     return jsonify(managed_clubs), 200
