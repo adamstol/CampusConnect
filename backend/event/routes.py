@@ -3,6 +3,7 @@ from extensions import db
 from event.event import Event
 from club.club import Club
 from userclub.userclub import UserClub
+from userevent.userevent import UserEvent
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
@@ -171,3 +172,94 @@ def get_club_events(club_id):
         'location': event.location
     } for event in events]
     return jsonify(events_data), 200
+
+
+# Endpoint to register for an event. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/register', methods=['POST'])
+@jwt_required()
+def register_for_event(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    existing_registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if existing_registration:
+        return jsonify({'message': 'Already registered for this event'}), 400
+
+    user_event = UserEvent(user_id=current_user_id, event_id=event_id)
+    db.session.add(user_event)
+    db.session.commit()
+
+    return jsonify({'message': 'Registered for event successfully'}), 200
+
+
+# Endpoint to cancel an event registration. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/cancel', methods=['POST'])
+@jwt_required()
+def cancel_registration(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if not registration:
+        return jsonify({'message': 'Not registered for this event'}), 400
+
+    db.session.delete(registration)
+    db.session.commit()
+
+    return jsonify({'message': 'Registration cancelled successfully'}), 200
+
+
+# Endpoint to get all attendees of an event. This endpoint is accessible only to the club's Admin or Club Representative.
+@event_bp.route('/<int:event_id>/attendees', methods=['GET'])
+@jwt_required()
+def get_event_attendees(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Check if the user is a member of the club with admin or representative role
+    user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=event.club_id).first()
+    if not user_club or user_club.role not in ['admin', 'representative']:
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can view attendees'}), 403
+
+    attendees = [{
+        'user_id': registration.user_id,
+        'first_name': registration.user.first_name,
+        'last_name': registration.user.last_name,
+        'email': registration.user.email,
+        'status': registration.status,
+        'registered_at': registration.registered_at.isoformat()
+    } for registration in event.user_events]
+    return jsonify(attendees), 200
+
+
+# Endpoint to get all events the current user is registered for. This endpoint is accessible to all authenticated users.
+@event_bp.route('/my-events', methods=['GET'])
+@jwt_required()
+def get_my_events():
+
+    # Get the JWT identity and query the UserEvent table for all events the user is registered for.
+    current_user_id = int(get_jwt_identity())
+    registrations = UserEvent.query.filter_by(user_id=current_user_id).all()
+    events = [{
+        'event_id': registration.event_id,
+        'event_name': registration.event.event_name,
+        'club_id': registration.event.club_id,
+        'club_name': registration.event.club.club_name,
+        'event_date': registration.event.event_date.isoformat(),
+        'location': registration.event.location,
+        'status': registration.status,
+        'registered_at': registration.registered_at.isoformat()
+    } for registration in registrations]
+    return jsonify(events), 200
