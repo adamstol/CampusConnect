@@ -245,13 +245,21 @@ def get_event_attendees(event_id):
 
 
 # Endpoint to get all events the current user is registered for. This endpoint is accessible to all authenticated users.
+# An optional ?status= query parameter filters the results by RSVP status (e.g. ?status=attending).
 @event_bp.route('/my-events', methods=['GET'])
 @jwt_required()
 def get_my_events():
 
     # Get the JWT identity and query the UserEvent table for all events the user is registered for.
     current_user_id = int(get_jwt_identity())
-    registrations = UserEvent.query.filter_by(user_id=current_user_id).all()
+    query = UserEvent.query.filter_by(user_id=current_user_id)
+
+    # Optionally filter by RSVP status if provided.
+    status_filter = request.args.get('status')
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+
+    registrations = query.all()
     events = [{
         'event_id': registration.event_id,
         'event_name': registration.event.event_name,
@@ -263,3 +271,73 @@ def get_my_events():
         'registered_at': registration.registered_at.isoformat()
     } for registration in registrations]
     return jsonify(events), 200
+
+
+# Valid RSVP statuses a user can set for an event.
+VALID_RSVP_STATUSES = ['attending', 'not_attending', 'maybe']
+
+
+# Endpoint to RSVP to an event (or update an existing RSVP). This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/rsvp', methods=['POST'])
+@jwt_required()
+def rsvp_to_event(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Validate the requested RSVP status.
+    data = request.get_json()
+    status = data.get('status')
+    if status not in VALID_RSVP_STATUSES:
+        return jsonify({'message': "status is required and must be one of: 'attending', 'not_attending', 'maybe'"}), 400
+
+    # Update the existing RSVP if there is one, otherwise create a new one.
+    registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if registration:
+        registration.status = status
+    else:
+        registration = UserEvent(user_id=current_user_id, event_id=event_id, status=status)
+        db.session.add(registration)
+    db.session.commit()
+
+    return jsonify({'message': f'RSVP updated to {status}'}), 200
+
+
+# Endpoint to get the number of users registered for an event, broken down by RSVP status. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/registration-count', methods=['GET'])
+@jwt_required()
+def get_event_registration_count(event_id):
+
+    # Query the event by ID.
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Count registrations grouped by RSVP status.
+    counts = {
+        'event_id': event_id,
+        'attending': UserEvent.query.filter_by(event_id=event_id, status='attending').count(),
+        'not_attending': UserEvent.query.filter_by(event_id=event_id, status='not_attending').count(),
+        'maybe': UserEvent.query.filter_by(event_id=event_id, status='maybe').count(),
+        'total': UserEvent.query.filter_by(event_id=event_id).count()
+    }
+    return jsonify(counts), 200
+
+
+# Endpoint to get the number of events the current user is registered for, broken down by RSVP status. This endpoint is accessible to all authenticated users.
+@event_bp.route('/my-events/count', methods=['GET'])
+@jwt_required()
+def get_my_events_count():
+
+    # Get the JWT identity and count the current user's registrations grouped by RSVP status.
+    current_user_id = int(get_jwt_identity())
+    counts = {
+        'attending': UserEvent.query.filter_by(user_id=current_user_id, status='attending').count(),
+        'not_attending': UserEvent.query.filter_by(user_id=current_user_id, status='not_attending').count(),
+        'maybe': UserEvent.query.filter_by(user_id=current_user_id, status='maybe').count(),
+        'total': UserEvent.query.filter_by(user_id=current_user_id).count()
+    }
+    return jsonify(counts), 200
