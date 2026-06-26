@@ -11,6 +11,7 @@ from auth.user import User
 from club.club import Club
 from userclub.userclub import UserClub
 from event.event import Event
+from userevent.userevent import UserEvent
 
 load_dotenv()
 
