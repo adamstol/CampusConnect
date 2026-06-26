@@ -63,6 +63,22 @@
 - `GET /clubs/my-clubs` — *(Bearer Token required)* return all clubs the authenticated user is a member of
 - `GET /clubs/my-managed-clubs` — *(Bearer Token required)* return all clubs the authenticated user created/manages
 
+### Event Endpoints
+
+- `POST /events/` — *(Bearer Token required)* create a new event for a club with club_id, event_name, and event_date (description and location optional); only accessible to the club's admin or representative
+- `GET /events/` — *(Bearer Token required)* return a list of all events
+- `GET /events/{event_id}` — *(Bearer Token required)* return details of a specific event by ID
+- `PATCH /events/{event_id}` — *(Bearer Token required)* update an event's name, description, date, and/or location; only accessible to the club's admin or representative
+- `DELETE /events/{event_id}` — *(Bearer Token required)* permanently delete an event; only accessible to the club's admin or representative
+- `GET /events/club/{club_id}` — *(Bearer Token required)* return all events belonging to the specified club
+- `POST /events/{event_id}/register` — *(Bearer Token required)* register the authenticated user for the specified event
+- `POST /events/{event_id}/cancel` — *(Bearer Token required)* cancel the authenticated user's registration for the specified event
+- `POST /events/{event_id}/rsvp` — *(Bearer Token required)* set or update the authenticated user's RSVP for the event; body `{ "status": "attending" | "not_attending" | "maybe" }`
+- `GET /events/{event_id}/attendees` — *(Bearer Token required)* return a list of all users registered for the event; only accessible to the club's admin or representative
+- `GET /events/{event_id}/registration-count` — *(Bearer Token required)* return the number of users registered for the event, broken down by RSVP status (attending, not_attending, maybe, total)
+- `GET /events/my-events` — *(Bearer Token required)* return all events the authenticated user has RSVP'd to; optional `?status=` query param filters by RSVP status (e.g. `?status=attending`)
+- `GET /events/my-events/count` — *(Bearer Token required)* return how many events the authenticated user has RSVP'd to, broken down by status
+
 ## Frontend Setup
 
 ### Prerequisites
