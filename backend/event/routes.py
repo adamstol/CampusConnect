@@ -3,6 +3,7 @@ from extensions import db
 from event.event import Event
 from club.club import Club
 from userclub.userclub import UserClub
+from userevent.userevent import UserEvent
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
@@ -171,3 +172,172 @@ def get_club_events(club_id):
         'location': event.location
     } for event in events]
     return jsonify(events_data), 200
+
+
+# Endpoint to register for an event. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/register', methods=['POST'])
+@jwt_required()
+def register_for_event(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    existing_registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if existing_registration:
+        return jsonify({'message': 'Already registered for this event'}), 400
+
+    user_event = UserEvent(user_id=current_user_id, event_id=event_id)
+    db.session.add(user_event)
+    db.session.commit()
+
+    return jsonify({'message': 'Registered for event successfully'}), 200
+
+
+# Endpoint to cancel an event registration. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/cancel', methods=['POST'])
+@jwt_required()
+def cancel_registration(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if not registration:
+        return jsonify({'message': 'Not registered for this event'}), 400
+
+    db.session.delete(registration)
+    db.session.commit()
+
+    return jsonify({'message': 'Registration cancelled successfully'}), 200
+
+
+# Endpoint to get all attendees of an event. This endpoint is accessible only to the club's Admin or Club Representative.
+@event_bp.route('/<int:event_id>/attendees', methods=['GET'])
+@jwt_required()
+def get_event_attendees(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Check if the user is a member of the club with admin or representative role
+    user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=event.club_id).first()
+    if not user_club or user_club.role not in ['admin', 'representative']:
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can view attendees'}), 403
+
+    attendees = [{
+        'user_id': registration.user_id,
+        'first_name': registration.user.first_name,
+        'last_name': registration.user.last_name,
+        'email': registration.user.email,
+        'status': registration.status,
+        'registered_at': registration.registered_at.isoformat()
+    } for registration in event.user_events]
+    return jsonify(attendees), 200
+
+
+# Endpoint to get all events the current user is registered for. This endpoint is accessible to all authenticated users.
+# An optional ?status= query parameter filters the results by RSVP status (e.g. ?status=attending).
+@event_bp.route('/my-events', methods=['GET'])
+@jwt_required()
+def get_my_events():
+
+    # Get the JWT identity and query the UserEvent table for all events the user is registered for.
+    current_user_id = int(get_jwt_identity())
+    query = UserEvent.query.filter_by(user_id=current_user_id)
+
+    # Optionally filter by RSVP status if provided.
+    status_filter = request.args.get('status')
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+
+    registrations = query.all()
+    events = [{
+        'event_id': registration.event_id,
+        'event_name': registration.event.event_name,
+        'club_id': registration.event.club_id,
+        'club_name': registration.event.club.club_name,
+        'event_date': registration.event.event_date.isoformat(),
+        'location': registration.event.location,
+        'status': registration.status,
+        'registered_at': registration.registered_at.isoformat()
+    } for registration in registrations]
+    return jsonify(events), 200
+
+
+# Valid RSVP statuses a user can set for an event.
+VALID_RSVP_STATUSES = ['attending', 'not_attending', 'maybe']
+
+
+# Endpoint to RSVP to an event (or update an existing RSVP). This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/rsvp', methods=['POST'])
+@jwt_required()
+def rsvp_to_event(event_id):
+
+    # Get the JWT identity and query the event by ID.
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Validate the requested RSVP status.
+    data = request.get_json()
+    status = data.get('status')
+    if status not in VALID_RSVP_STATUSES:
+        return jsonify({'message': "status is required and must be one of: 'attending', 'not_attending', 'maybe'"}), 400
+
+    # Update the existing RSVP if there is one, otherwise create a new one.
+    registration = UserEvent.query.filter_by(user_id=current_user_id, event_id=event_id).first()
+    if registration:
+        registration.status = status
+    else:
+        registration = UserEvent(user_id=current_user_id, event_id=event_id, status=status)
+        db.session.add(registration)
+    db.session.commit()
+
+    return jsonify({'message': f'RSVP updated to {status}'}), 200
+
+
+# Endpoint to get the number of users registered for an event, broken down by RSVP status. This endpoint is accessible to all authenticated users.
+@event_bp.route('/<int:event_id>/registration-count', methods=['GET'])
+@jwt_required()
+def get_event_registration_count(event_id):
+
+    # Query the event by ID.
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    # Count registrations grouped by RSVP status.
+    counts = {
+        'event_id': event_id,
+        'attending': UserEvent.query.filter_by(event_id=event_id, status='attending').count(),
+        'not_attending': UserEvent.query.filter_by(event_id=event_id, status='not_attending').count(),
+        'maybe': UserEvent.query.filter_by(event_id=event_id, status='maybe').count(),
+        'total': UserEvent.query.filter_by(event_id=event_id).count()
+    }
+    return jsonify(counts), 200
+
+
+# Endpoint to get the number of events the current user is registered for, broken down by RSVP status. This endpoint is accessible to all authenticated users.
+@event_bp.route('/my-events/count', methods=['GET'])
+@jwt_required()
+def get_my_events_count():
+
+    # Get the JWT identity and count the current user's registrations grouped by RSVP status.
+    current_user_id = int(get_jwt_identity())
+    counts = {
+        'attending': UserEvent.query.filter_by(user_id=current_user_id, status='attending').count(),
+        'not_attending': UserEvent.query.filter_by(user_id=current_user_id, status='not_attending').count(),
+        'maybe': UserEvent.query.filter_by(user_id=current_user_id, status='maybe').count(),
+        'total': UserEvent.query.filter_by(user_id=current_user_id).count()
+    }
+    return jsonify(counts), 200
