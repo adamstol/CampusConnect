@@ -7,11 +7,13 @@ from extensions import db
 from auth.routes import auth_bp
 from club.routes import club_bp
 from event.routes import event_bp
+from announcement.routes import announcement_bp
 from auth.user import User
 from club.club import Club
 from userclub.userclub import UserClub
 from event.event import Event
 from userevent.userevent import UserEvent
+from announcement.announcement import Announcement
 
 load_dotenv()
 
@@ -34,6 +36,7 @@ jwt = JWTManager(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
+app.register_blueprint(announcement_bp)
 
 # Create the database tables if they don't exist
 with app.app_context():
