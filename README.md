@@ -100,6 +100,14 @@
 - `GET /events/my-events` — *(Bearer Token required)* return all events the authenticated user has RSVP'd to; optional `?status=` query param filters by RSVP status (e.g. `?status=attending`)
 - `GET /events/my-events/count` — *(Bearer Token required)* return how many events the authenticated user has RSVP'd to, broken down by status
 
+### Announcement Endpoints
+
+- `POST /clubs/{club_id}/announcements` — *(Bearer Token required)* create an announcement for the specified club; only accessible to the club's admin or representative, or a platform administrator
+- `GET /clubs/{club_id}/announcements` — *(Bearer Token required)* return all announcements for the specified club, ordered newest first
+- `GET /announcements/{announcement_id}` — *(Bearer Token required)* return details of a specific announcement by ID
+- `PATCH /announcements/{announcement_id}` — *(Bearer Token required)* update an announcement's title and/or body; only accessible to the club's admin or representative, or a platform administrator
+- `DELETE /announcements/{announcement_id}` — *(Bearer Token required)* permanently delete an announcement; only accessible to the club's admin or representative, or a platform administrator
+
 ## Frontend Setup
 
 ### Prerequisites
