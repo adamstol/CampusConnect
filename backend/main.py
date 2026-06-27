@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from extensions import db
 from auth.routes import auth_bp
@@ -18,6 +19,7 @@ from announcement.announcement import Announcement
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:3000']) # NOTE: after deploying, add production frontend URL (from env variable probably)
 
 # Configure the SQLAlchemy database URI using the environment variable from the .env file.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
