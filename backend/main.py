@@ -2,20 +2,24 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from extensions import db
 from auth.routes import auth_bp
 from club.routes import club_bp
 from event.routes import event_bp
+from announcement.routes import announcement_bp
 from auth.user import User
 from club.club import Club
 from userclub.userclub import UserClub
 from event.event import Event
 from userevent.userevent import UserEvent
+from announcement.announcement import Announcement
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:3000']) # NOTE: after deploying, add production frontend URL (from env variable probably)
 
 # Configure the SQLAlchemy database URI using the environment variable from the .env file.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
@@ -34,6 +38,7 @@ jwt = JWTManager(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
+app.register_blueprint(announcement_bp)
 
 # Create the database tables if they don't exist
 with app.app_context():
