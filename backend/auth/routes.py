@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_mail import Message
 import bcrypt
 import secrets
 from datetime import datetime, timedelta, timezone
-from extensions import db
+from extensions import db, mail
 from auth.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -42,14 +43,22 @@ def register():
 
     db.session.add(new_user)
     db.session.commit()
-    
-    #Email Verification
-    #Some Code, but for now, we'll just get the token via postman, and implement when we have a frontend
-    
-    return jsonify({
-        'message': 'Successfully Registered. Please verify your email.',
-        'debug_verification_token': token
-    }), 201
+
+    verify_url = f"http://localhost:8080/auth/verify-email?token={token}"
+    msg = Message(
+        subject='CampusConnect — Verify your email',
+        recipients=[email],
+        body=(
+            f"Hi {first_name},\n\n"
+            f"Thanks for signing up! Use the token below to verify your email address:\n\n"
+            f"{token}\n\n"
+            f"This token expires in 24 hours.\n\n"
+            f"— The CampusConnect Team"
+        )
+    )
+    mail.send(msg)
+
+    return jsonify({'message': 'Successfully Registered. Please verify your email.'}), 201
 
 # This Endpoint allows users to verify their email by providing the token they received in their email.
 @auth_bp.route('/verify-email', methods=['GET'])
@@ -110,7 +119,29 @@ def login():
     db.session.commit()
 
     access_token = create_access_token(identity=str(user.user_id))
-    return jsonify({'message': 'Login successful', 'access_token': access_token}), 200
+    return jsonify({
+        'message': 'Login successful',
+        'access_token': access_token,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    }), 200
+
+# This endpoint returns the authenticated user's profile info
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def me():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    return jsonify({
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'role_name': user.role_name,
+    }), 200
 
 # This Endpoint allows for authenticated users to update their profile information
 @auth_bp.route('/profile', methods=['PATCH'])
@@ -175,11 +206,23 @@ def request_password_reset():
         return jsonify({'message': 'Email is not registered'}), 200
     token = secrets.token_urlsafe(32)
     user.password_reset_token = token
-    user.password_reset_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    user.password_reset_token_expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
     db.session.commit()
-    
-     #Some Code, but for now, we'll just get the token via postman, and implement when we have a frontend
-    return jsonify({'message': 'Password reset token generated', 'debug_reset_token': token}), 200
+
+    msg = Message(
+        subject='CampusConnect — Reset your password',
+        recipients=[email],
+        body=(
+            f"Hi {user.first_name},\n\n"
+            f"We received a request to reset your password. Copy the token below and paste it into the password reset page:\n\n"
+            f"{token}\n\n"
+            f"This token expires in 1 hour. If you did not request a password reset, you can ignore this email.\n\n"
+            f"— The CampusConnect Team"
+        )
+    )
+    mail.send(msg)
+
+    return jsonify({'message': 'Password reset email sent'}), 200
 
 # This endpoint allows users to reset their password using the token they received in their email.
 @auth_bp.route('/reset-password', methods=['POST'])
@@ -197,7 +240,7 @@ def reset_password():
     if not user:
         return jsonify({'message': 'Invalid token'}), 400
     
-    if user.password_reset_token_expires_at < datetime.utcnow():
+    if user.password_reset_token_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({'message': 'Token expired'}), 400
     
     user.password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

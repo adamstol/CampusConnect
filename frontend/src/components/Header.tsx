@@ -1,7 +1,26 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function Header() {
+  const [initials, setInitials] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch('http://localhost:5000/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.first_name && data?.last_name) {
+          setInitials(`${data.first_name[0]}${data.last_name[0]}`.toUpperCase());
+        }
+      })
+      .catch(() => {});
+  }, []);
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,7 +57,9 @@ export default function Header() {
 
           {/* User Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden sm:block text-gray-900 hover:text-gray-900 font-medium">Sign Up Today</Link>
+            {!initials && (
+              <Link href="/login" className="hidden sm:block text-gray-900 hover:text-gray-900 font-medium">Sign Up Today</Link>
+            )}
             
             <button className="p-2 text-gray-700 hover:text-gray-900">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,12 +74,21 @@ export default function Header() {
             </button>
             
             <div className="relative">
-              <button className="p-2 text-gray-700 hover:text-gray-900">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
+              {initials ? (
+                <Link
+                  href="/user-dashboard"
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
+                  style={{ backgroundColor: '#FE3B5E' }}
+                >
+                  {initials}
+                </Link>
+              ) : (
+                <button className="p-2 text-gray-700 hover:text-gray-900">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
