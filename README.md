@@ -65,6 +65,7 @@
 - `POST /auth/register` — register a new user with first name, last name, email, and password; returns an email verification token
 - `GET /auth/verify-email?token={token}` — verify the user's email using the token received at registration
 - `POST /auth/login` — log in with email and password; returns a JWT access token; locks the account after 3 failed attempts
+- `GET /auth/me` — *(Bearer Token required)* return the authenticated user's profile (`first_name`, `last_name`, `email`, `role_name`)
 - `PATCH /auth/profile` — *(Bearer Token required)* update the authenticated user's first name, last name, email, and/or password
 - `GET /auth/status` — *(Bearer Token required)* return the authenticated user's account status (email verified, account enabled, account locked)
 - `POST /auth/request-password-reset` — generate a password reset token for the given email address

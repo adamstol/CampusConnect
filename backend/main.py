@@ -50,7 +50,6 @@ app.register_blueprint(announcement_bp)
 
 # Drop all tables and recreate from scratch on every startup
 with app.app_context():
-    db.drop_all()
     db.create_all()
 
 # This function is the entry point for the Flask application. It defines a route for the root URL and returns a simple Hello, World!
