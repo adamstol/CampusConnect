@@ -6,3 +6,4 @@ python-dotenv
 flask-jwt-extended
 bcrypt
 gunicorn
+flask-mail
