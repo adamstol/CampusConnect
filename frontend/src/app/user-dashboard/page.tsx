@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const userEvents = [
   {
@@ -21,6 +22,24 @@ const userEvents = [
 ];
 
 export default function UserDashboardPage() {
+  const router = useRouter();
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    fetch('http://localhost:5000/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.first_name) setFirstName(data.first_name);
+        if (data?.last_name) setLastName(data.last_name);
+      })
+      .catch(() => {});
+  }, []);
+
   const [settings, setSettings] = useState({
     notifications: true,
     emailUpdates: true,
@@ -32,6 +51,11 @@ export default function UserDashboardPage() {
 
   const toggleSetting = (key: string) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('access_token');
+    router.push('/login');
   };
 
   return (
@@ -50,12 +74,12 @@ export default function UserDashboardPage() {
             </Link>
             
             <div className="flex items-center gap-4">
-              <span className="text-gray-700">James</span>
-              <button className="p-2 text-gray-700 hover:text-gray-900">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
+              <div
+                className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
+                style={{ backgroundColor: '#FE3B5E' }}
+              >
+                {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : ''}
+              </div>
             </div>
           </div>
         </div>
@@ -64,7 +88,7 @@ export default function UserDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back, James!</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {firstName}!</h1>
           <p className="text-gray-900 mt-2">Here's what's happening with your account</p>
         </div>
 
@@ -231,7 +255,7 @@ export default function UserDashboardPage() {
                   <button className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                     Change Password
                   </button>
-                  <button className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                     Sign Out
                   </button>
                 </div>
