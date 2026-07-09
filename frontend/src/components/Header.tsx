@@ -22,7 +22,7 @@ export default function Header() {
       .catch(() => {});
   }, []);
   return (
-    <header className="bg-white border-b border-gray-200">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -32,20 +32,20 @@ export default function Header() {
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
               </svg>
             </div>
-            <span className="text-xl font-semibold text-gray-900">CampusConnect</span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-white">CampusConnect</span>
           </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#" className="text-gray-700 hover:text-gray-900">Donate</a>
-            <Link href="/events-this-week" className="text-gray-900 hover:text-gray-900 font-medium">Events This Week</Link>
+            <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Donate</a>
+            <Link href="/events-this-week" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Events This Week</Link>
             
             {/* Search */}
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search Clubs"
-                className="w-64 pl-4 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-64 pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
               <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,16 +58,16 @@ export default function Header() {
           {/* User Actions */}
           <div className="flex items-center gap-4">
             {!initials && (
-              <Link href="/login" className="hidden sm:block text-gray-900 hover:text-gray-900 font-medium">Sign Up Today</Link>
+              <Link href="/login" className="hidden sm:block text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 font-medium">Sign Up Today</Link>
             )}
             
-            <button className="p-2 text-gray-700 hover:text-gray-900">
+            <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
             
-            <button className="p-2 text-gray-700 hover:text-gray-900">
+            <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -83,7 +83,7 @@ export default function Header() {
                   {initials}
                 </Link>
               ) : (
-                <button className="p-2 text-gray-700 hover:text-gray-900">
+                <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
