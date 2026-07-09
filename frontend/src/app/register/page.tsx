@@ -58,23 +58,23 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center relative">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center relative">
       {/* Back to Home Link */}
-      <Link href="/" className="absolute top-6 left-6 text-gray-600 hover:text-gray-900 flex items-center gap-2">
+      <Link href="/" className="absolute top-6 left-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-2">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Back to Home
       </Link>
 
-      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg" style={{ backgroundColor: '#FE3B5E' }}>
+      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E] dark:bg-[#b5203c]">
         {/* Diamond Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-6 h-6 bg-white rotate-45"></div>
         </div>
 
         {/* Toggle Buttons */}
-        <div className="flex mb-8 rounded-full p-1" style={{ backgroundColor: '#FEB4C1' }}>
+        <div className="flex mb-8 rounded-full p-1 bg-[#FEB4C1] dark:bg-[#c9707f]">
           <span className="flex-1 py-2 rounded-full font-semibold bg-white text-gray-800 shadow-md text-center">
             Signup
           </span>
@@ -109,8 +109,7 @@ export default function RegisterPage() {
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your first name"
             />
           </div>
@@ -125,8 +124,7 @@ export default function RegisterPage() {
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your last name"
             />
           </div>
@@ -141,8 +139,7 @@ export default function RegisterPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your email"
             />
           </div>
@@ -157,8 +154,7 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your password"
             />
           </div>
@@ -173,8 +169,7 @@ export default function RegisterPage() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Confirm your password"
             />
           </div>
@@ -183,8 +178,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md"
-            style={{ backgroundColor: '#FE3B5E' }}
+            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md bg-[#FE3B5E] dark:bg-[#b5203c]"
           >
             Sign Up
           </button>
