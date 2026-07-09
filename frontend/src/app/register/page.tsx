@@ -2,16 +2,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
+    confirmPassword: '',
   });
 
   const [message, setMessage] = useState('');
-  const router = useRouter();
+  const [registered, setRegistered] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -23,22 +25,32 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (formData.password !== formData.confirmPassword) {
+      setMessage('Passwords do not match.');
+      return;
+    }
+
     try {
-      const response = await fetch('http://localhost:5000/auth/login', {
+      const response = await fetch('http://localhost:5000/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('access_token', data.access_token);
-        router.push('/user-dashboard');
+        setRegistered(true);
+        setMessage(data.message || 'Registration successful! Please verify your email.');
       } else {
-        setMessage(data.error || 'Login failed. Please try again.');
+        setMessage(data.message || 'Registration failed. Please try again.');
       }
     } catch {
       setMessage('An error occurred. Please try again later.');
@@ -63,18 +75,62 @@ export default function LoginPage() {
 
         {/* Toggle Buttons */}
         <div className="flex mb-8 rounded-full p-1" style={{ backgroundColor: '#FEB4C1' }}>
+          <span className="flex-1 py-2 rounded-full font-semibold bg-white text-gray-800 shadow-md text-center">
+            Signup
+          </span>
           <Link
-            href="/register"
+            href="/login"
             className="flex-1 py-2 rounded-full font-semibold transition-all text-center text-gray-800 hover:text-gray-900"
           >
-            Signup
-          </Link>
-          <span className="flex-1 py-2 rounded-full font-semibold bg-white text-gray-800 shadow-md text-center">
             Login
-          </span>
+          </Link>
         </div>
 
+        {registered ? (
+          <div className="text-center space-y-6">
+            <p className="text-white text-sm font-semibold">{message}</p>
+            <Link
+              href="/verify-email"
+              className="block w-full text-center text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md"
+              style={{ border: '2px solid #FEB4C1' }}
+            >
+              Verify My Email
+            </Link>
+          </div>
+        ) : (
         <form className="space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-bold mb-2" style={{ color: '#FEB4C1' }}>
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              placeholder="Enter your first name"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-bold mb-2" style={{ color: '#FEB4C1' }}>
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              placeholder="Enter your last name"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-bold mb-2" style={{ color: '#FEB4C1' }}>
               Email
@@ -107,10 +163,20 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="text-right -mt-2">
-            <Link href="/forgot-password" className="text-sm font-semibold" style={{ color: '#FEB4C1' }}>
-              Forgot password?
-            </Link>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-bold mb-2" style={{ color: '#FEB4C1' }}>
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              placeholder="Confirm your password"
+            />
           </div>
 
           {message && <p className="text-white text-sm font-semibold">{message}</p>}
@@ -120,9 +186,10 @@ export default function LoginPage() {
             className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md"
             style={{ backgroundColor: '#FE3B5E' }}
           >
-            Login
+            Sign Up
           </button>
         </form>
+        )}
       </div>
     </div>
   );

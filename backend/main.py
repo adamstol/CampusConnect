@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from extensions import db
+from extensions import db, mail
 from auth.routes import auth_bp
 from club.routes import club_bp
 from event.routes import event_bp
@@ -29,10 +29,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 
+# Configure Flask-Mail using environment variables from the .env file.
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
-# Initialize the database and JWT manager with the Flask app
+# Initialize the database, JWT manager, and mail with the Flask app
 db.init_app(app)
 jwt = JWTManager(app)
+mail.init_app(app)
 
 # Register the authentication blueprint with the Flask app
 app.register_blueprint(auth_bp)
@@ -40,7 +48,7 @@ app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
 
-# Create the database tables if they don't exist
+# Drop all tables and recreate from scratch on every startup
 with app.app_context():
     db.create_all()
 
