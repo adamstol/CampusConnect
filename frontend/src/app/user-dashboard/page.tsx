@@ -24,7 +24,7 @@ const userEvents = [
 
 export default function UserDashboardPage() {
   const router = useRouter();
-  const { isDark, toggleDark } = useTheme();
+  const { isDark, toggleDark, resetTheme } = useTheme();
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
 
@@ -56,6 +56,7 @@ export default function UserDashboardPage() {
 
   const handleSignOut = () => {
     localStorage.removeItem('access_token');
+    resetTheme();
     router.push('/login');
   };
 
