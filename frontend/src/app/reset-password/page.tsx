@@ -53,16 +53,16 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center relative">
+    <div className="min-h-screen bg-white flex items-center justify-center relative">
       {/* Back to Login Link */}
-      <Link href="/login" className="absolute top-6 left-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-2">
+      <Link href="/login" className="absolute top-6 left-6 text-gray-600 hover:text-gray-900 flex items-center gap-2">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Back to Login
       </Link>
 
-      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E] dark:bg-[#b5203c]">
+      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E]">
         {/* Diamond Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-6 h-6 bg-white rotate-45"></div>
@@ -100,7 +100,7 @@ export default function ResetPasswordPage() {
                 value={formData.token}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
                 placeholder="Paste your reset token here"
               />
             </div>
@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
                 placeholder="Enter new password"
               />
             </div>
@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] dark:bg-[#b5203c] border-[#FEB4C1] dark:border-[#c9707f] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
+                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
                 placeholder="Confirm new password"
               />
             </div>
