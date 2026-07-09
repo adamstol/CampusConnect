@@ -67,14 +67,14 @@ export default function RegisterPage() {
         Back to Home
       </Link>
 
-      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg" style={{ backgroundColor: '#FE3B5E' }}>
+      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E]">
         {/* Diamond Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-6 h-6 bg-white rotate-45"></div>
         </div>
 
         {/* Toggle Buttons */}
-        <div className="flex mb-8 rounded-full p-1" style={{ backgroundColor: '#FEB4C1' }}>
+        <div className="flex mb-8 rounded-full p-1 bg-[#FEB4C1]">
           <span className="flex-1 py-2 rounded-full font-semibold bg-white text-gray-800 shadow-md text-center">
             Signup
           </span>
@@ -109,8 +109,7 @@ export default function RegisterPage() {
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your first name"
             />
           </div>
@@ -125,8 +124,7 @@ export default function RegisterPage() {
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your last name"
             />
           </div>
@@ -141,8 +139,7 @@ export default function RegisterPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your email"
             />
           </div>
@@ -157,8 +154,7 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your password"
             />
           </div>
@@ -173,8 +169,7 @@ export default function RegisterPage() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Confirm your password"
             />
           </div>
@@ -183,8 +178,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md"
-            style={{ backgroundColor: '#FE3B5E' }}
+            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md bg-[#FE3B5E]"
           >
             Sign Up
           </button>

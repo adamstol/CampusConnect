@@ -43,7 +43,7 @@ export default function VerifyEmailPage() {
         Back to Login
       </Link>
 
-      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg" style={{ backgroundColor: '#FE3B5E' }}>
+      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E]">
         {/* Diamond Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-6 h-6 bg-white rotate-45"></div>
@@ -84,8 +84,7 @@ export default function VerifyEmailPage() {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-                style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+                className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
                 placeholder="Paste your token here"
               />
             </div>
