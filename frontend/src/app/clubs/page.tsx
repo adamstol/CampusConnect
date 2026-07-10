@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import ClubCard from '@/components/ClubCard';
 import { clubs } from '@/data/clubs';
 
@@ -60,7 +59,6 @@ export default function ClubsPage() {
           </p>
         )}
       </main>
-      <Footer />
     </div>
   );
 }
