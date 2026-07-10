@@ -1,125 +1,62 @@
 'use client';
 
+import { useState } from 'react';
 import Header from '@/components/Header';
-import Link from 'next/link';
-import React, { useCallback, useEffect, useState } from 'react';
-
-interface Club {
-  club_id: number;
-  club_name: string;
-  description: string | null;
-}
-
-const API_BASE_URL = 'http://localhost:5000';
+import ClubCard from '@/components/ClubCard';
+import { clubs } from '@/data/clubs';
 
 export default function ClubsPage() {
-  const [clubs, setClubs] = useState<Club[]>([]);
-  const [message, setMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasToken, setHasToken] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const loadClubs = useCallback(async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/clubs/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('access_token');
-        setHasToken(false);
-        setClubs([]);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage(data.message || 'Unable to load clubs.');
-        return;
-      }
-
-      setClubs(data);
-    } catch {
-      setMessage('Unable to load clubs right now.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      const token = localStorage.getItem('access_token');
-
-      if (!token) {
-        setHasToken(false);
-        setIsLoading(false);
-        return;
-      }
-
-      loadClubs(token);
-    });
-  }, [loadClubs]);
+  const filteredClubs = clubs.filter((club) =>
+    club.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <Header />
-
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Campus Directory</p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">Clubs</h1>
-            <p className="mt-2 max-w-2xl text-gray-600">
-              Browse every club currently stored in CampusConnect.
-            </p>
-          </div>
-
-          <Link
-            href="/userclubs"
-            className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-red-700"
-          >
-            Create Club
-          </Link>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Explore Clubs at York University
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            Find a community that matches your interests and get involved on campus
+          </p>
         </div>
 
-        {!hasToken ? (
-          <section className="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-md">
-            <h2 className="text-xl font-bold text-gray-900">Sign in to view clubs</h2>
-            <p className="mt-2 text-gray-600">The clubs endpoint requires an authenticated account.</p>
-            <Link
-              href="/login"
-              className="mt-6 inline-flex rounded-lg bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
-            >
-              Go to Login
-            </Link>
-          </section>
-        ) : isLoading ? (
-          <section className="rounded-lg bg-white p-8 shadow-md">
-            <p className="text-sm font-semibold text-gray-600">Loading clubs...</p>
-          </section>
-        ) : message ? (
-          <section className="rounded-lg border border-red-100 bg-red-50 p-8 shadow-md">
-            <p className="font-semibold text-red-700">{message}</p>
-          </section>
-        ) : clubs.length > 0 ? (
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {clubs.map((club) => (
-              <article key={club.club_id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-md">
-                <p className="text-xs font-bold uppercase tracking-wide text-red-600">Club #{club.club_id}</p>
-                <h2 className="mt-2 text-xl font-bold text-gray-900">{club.club_name}</h2>
-                <p className="mt-3 text-sm leading-6 text-gray-600">
-                  {club.description || 'No description has been added yet.'}
-                </p>
-              </article>
+        <div className="max-w-md mx-auto mb-10">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search clubs by name"
+              className="w-full pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+            <svg className="w-5 h-5 text-red-600 absolute right-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        {filteredClubs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredClubs.map((club) => (
+              <ClubCard
+                key={club.id}
+                id={club.id}
+                name={club.name}
+                description={club.description}
+                category={club.category}
+                location={club.location}
+              />
             ))}
-          </section>
+          </div>
         ) : (
-          <section className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
-            <h2 className="text-xl font-bold text-gray-900">No clubs found</h2>
-            <p className="mt-2 text-gray-600">Create a club to populate the directory.</p>
-          </section>
+          <p className="text-center text-gray-600 dark:text-gray-400">
+            No clubs found matching &quot;{searchQuery}&quot;.
+          </p>
         )}
       </main>
     </div>

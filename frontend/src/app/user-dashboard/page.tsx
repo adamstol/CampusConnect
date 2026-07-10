@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { API_BASE_URL } from '@/lib/api';
 
 interface DashboardEvent {
   event_id: number;
@@ -29,8 +30,6 @@ interface EventFormData {
   eventDate: string;
   location: string;
 }
-
-const API_BASE_URL = 'http://localhost:5000';
 
 function formatEventDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
