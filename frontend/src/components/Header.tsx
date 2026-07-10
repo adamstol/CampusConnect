@@ -11,7 +11,9 @@ export default function Header() {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    fetch('http://localhost:5000/auth/me', {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+    fetch(`${apiUrl}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => (res.ok ? res.json() : null))
