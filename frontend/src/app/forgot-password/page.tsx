@@ -7,12 +7,13 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:5000/auth/request-password-reset', {
+      const response = await fetch(`${apiUrl}/auth/request-password-reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
