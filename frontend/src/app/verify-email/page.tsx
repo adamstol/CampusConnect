@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function VerifyEmailPage() {
   const [token, setToken] = useState('');
@@ -15,7 +16,7 @@ export default function VerifyEmailPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/auth/verify-email?token=${encodeURIComponent(token.trim())}`,
+        `${API_BASE_URL}/auth/verify-email?token=${encodeURIComponent(token.trim())}`,
         { method: 'GET' }
       );
 
