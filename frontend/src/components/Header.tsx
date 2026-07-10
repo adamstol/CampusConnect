@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Header() {
@@ -25,19 +26,20 @@ export default function Header() {
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold text-gray-900">CampusConnect</span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/campusconnect-logo.png"
+              alt="CampusConnect"
+              width={156}
+              height={112}
+              priority
+              className="h-12 w-auto object-contain"
+            />
           </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#" className="text-gray-700 hover:text-gray-900">Donate</a>
+            <Link href="/clubs" className="text-gray-700 hover:text-gray-900">Clubs</Link>
             <Link href="/events-this-week" className="text-gray-900 hover:text-gray-900 font-medium">Events This Week</Link>
             
             {/* Search */}
