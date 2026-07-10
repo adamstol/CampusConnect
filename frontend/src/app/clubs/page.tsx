@@ -10,7 +10,7 @@ interface Club {
   description: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function ClubsPage() {
   const [clubs, setClubs] = useState<Club[]>([]);
