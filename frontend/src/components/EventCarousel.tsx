@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import EventCard from './EventCard';
 
-interface Event {
+export interface CarouselEvent {
   id: number;
   title: string;
   location: string;
@@ -11,42 +11,30 @@ interface Event {
   imageUrl?: string;
 }
 
-const sampleEvents: Event[] = [
-  {
-    id: 1,
-    title: "CSHub Larp Show",
-    location: "York University - Vari Hall",
-    date: "July 15, 2024",
-  },
-  {
-    id: 2,
-    title: "Wise James Hunt",
-    location: "Student Centre - Room 101",
-    date: "July 18, 2024",
-  },
-  {
-    id: 3,
-    title: "Bosh Night",
-    location: "Athletics Centre",
-    date: "July 20, 2024",
-  },
-  {
-    id: 4,
-    title: "Lionel Messi Evening",
-    location: "York University - Stadium",
-    date: "July 22, 2024",
-  },
-];
+interface EventCarouselProps {
+  events: CarouselEvent[];
+}
 
-export default function EventCarousel() {
+export default function EventCarousel({ events = [] }: EventCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  if (events.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
+          <h2 className="text-xl font-bold text-gray-900">No events yet</h2>
+          <p className="mt-2 text-gray-600">Events added to the database will appear here.</p>
+        </div>
+      </div>
+    );
+  }
+
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % sampleEvents.length);
+    setCurrentIndex((prev) => (prev + 1) % events.length);
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + sampleEvents.length) % sampleEvents.length);
+    setCurrentIndex((prev) => (prev - 1 + events.length) % events.length);
   };
 
   return (
@@ -72,7 +60,7 @@ export default function EventCarousel() {
 
         {/* Event Cards */}
         <div className="flex gap-6 overflow-x-auto py-4 px-12">
-          {sampleEvents.map((event) => (
+          {events.map((event) => (
             <div key={event.id} className="flex-shrink-0 w-80">
               <EventCard
                 title={event.title}
@@ -86,7 +74,7 @@ export default function EventCarousel() {
 
         {/* Pagination Dots */}
         <div className="flex justify-center gap-2 mt-6">
-          {sampleEvents.map((_, index) => (
+          {events.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
