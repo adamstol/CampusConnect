@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function LoginPage() {
 
   const [message, setMessage] = useState('');
   const router = useRouter();
+  const { initThemeForUser } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -36,6 +38,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
+        initThemeForUser(formData.email);
         router.push('/user-dashboard');
       } else {
         setMessage(data.error || 'Login failed. Please try again.');
@@ -55,14 +58,14 @@ export default function LoginPage() {
         Back to Home
       </Link>
 
-      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg" style={{ backgroundColor: '#FE3B5E' }}>
+      <div className="rounded-3xl p-10 w-full max-w-md shadow-lg bg-[#FE3B5E]">
         {/* Diamond Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-6 h-6 bg-white rotate-45"></div>
         </div>
 
         {/* Toggle Buttons */}
-        <div className="flex mb-8 rounded-full p-1" style={{ backgroundColor: '#FEB4C1' }}>
+        <div className="flex mb-8 rounded-full p-1 bg-[#FEB4C1]">
           <Link
             href="/register"
             className="flex-1 py-2 rounded-full font-semibold transition-all text-center text-gray-800 hover:text-gray-900"
@@ -85,8 +88,7 @@ export default function LoginPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your email"
             />
           </div>
@@ -101,8 +103,7 @@ export default function LoginPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
-              style={{ backgroundColor: '#FE3B5E', borderColor: '#FEB4C1', color: 'white' }}
+              className="w-full px-4 py-3 rounded-xl border-2 bg-[#FE3B5E] border-[#FEB4C1] text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent font-bold"
               placeholder="Enter your password"
             />
           </div>
@@ -117,8 +118,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md"
-            style={{ backgroundColor: '#FE3B5E' }}
+            className="w-full text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-md bg-[#FE3B5E]"
           >
             Login
           </button>
