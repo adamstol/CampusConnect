@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import EventCard from '@/components/EventCard';
 import { clubs } from '@/data/clubs';
 
@@ -58,7 +57,6 @@ export default function ClubDetailPage() {
             Back to Clubs
           </Link>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -138,7 +136,6 @@ export default function ClubDetailPage() {
           </div>
         </section>
       </main>
-      <Footer />
     </div>
   );
 }
