@@ -19,7 +19,7 @@ from announcement.announcement import Announcement
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000']) # NOTE: after deploying, add production frontend URL (from env variable probably)
+CORS(app, origins=['http://localhost:3000', os.getenv('FRONTEND_ORIGIN')]) #FRONTEND_ORIGIN points to the latest frontend build
 
 # Configure the SQLAlchemy database URI using the environment variable from the .env file.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
