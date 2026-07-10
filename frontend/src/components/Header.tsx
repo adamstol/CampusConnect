@@ -38,6 +38,7 @@ export default function Header() {
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Donate</a>
+            <Link href="/clubs" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Clubs</Link>
             <Link href="/events-this-week" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Events This Week</Link>
             
             {/* Search */}
