@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function Header() {
   const [initials, setInitials] = useState<string | null>(null);
@@ -10,7 +11,7 @@ export default function Header() {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    fetch('http://localhost:5000/auth/me', {
+    fetch(`${API_BASE_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => (res.ok ? res.json() : null))

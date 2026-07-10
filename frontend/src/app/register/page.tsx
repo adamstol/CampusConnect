@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -31,7 +32,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
