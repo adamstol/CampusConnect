@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { API_BASE_URL } from '@/lib/api';
 
 const userEvents = [
   {
@@ -31,7 +32,7 @@ export default function UserDashboardPage() {
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) return;
-    fetch('http://localhost:5000/auth/me', {
+    fetch(`${API_BASE_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => (res.ok ? res.json() : null))
