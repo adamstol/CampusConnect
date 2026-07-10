@@ -21,9 +21,9 @@ export default function EventCarousel({ events = [] }: EventCarouselProps) {
   if (events.length === 0) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
-          <h2 className="text-xl font-bold text-gray-900">No events yet</h2>
-          <p className="mt-2 text-gray-600">Events added to the database will appear here.</p>
+        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">No events yet</h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Events added to the database will appear here.</p>
         </div>
       </div>
     );
