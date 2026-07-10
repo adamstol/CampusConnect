@@ -1,47 +1,64 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
 
-const userEvents = [
-  {
-    id: 1,
-    title: "CSHub Larp Show",
-    location: "York University - Vari Hall",
-    date: "July 15, 2024",
-    status: "Registered",
-  },
-  {
-    id: 2,
-    title: "Tech Talk Series",
-    location: "Bergeron Centre",
-    date: "July 19, 2024",
-    status: "Interested",
-  },
-];
+interface DashboardEvent {
+  event_id: number;
+  club_id: number;
+  club_name: string;
+  event_name: string;
+  description: string | null;
+  event_date: string;
+  location: string | null;
+}
+
+interface ManagedClub {
+  club_id: number;
+  club_name: string;
+  role: string;
+}
+
+interface EventFormData {
+  clubId: string;
+  eventName: string;
+  description: string;
+  eventDate: string;
+  location: string;
+}
+
+function formatEventDate(date: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
 
 export default function UserDashboardPage() {
   const router = useRouter();
   const { isDark, toggleDark, resetTheme } = useTheme();
-  const [firstName, setFirstName] = useState<string>('');
-  const [lastName, setLastName] = useState<string>('');
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) return;
-    fetch(`${API_BASE_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.first_name) setFirstName(data.first_name);
-        if (data?.last_name) setLastName(data.last_name);
-      })
-      .catch(() => {});
-  }, []);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [managedClubs, setManagedClubs] = useState<ManagedClub[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+  const [eventMessage, setEventMessage] = useState('');
+  const [eventForm, setEventForm] = useState<EventFormData>({
+    clubId: '',
+    eventName: '',
+    description: '',
+    eventDate: '',
+    location: '',
+  });
 
   const [settings, setSettings] = useState({
     notifications: true,
@@ -51,8 +68,76 @@ export default function UserDashboardPage() {
     language: 'en',
   });
 
+  const handleUnauthorized = useCallback(() => {
+    localStorage.removeItem('access_token');
+    resetTheme();
+    router.push('/login');
+  }, [resetTheme, router]);
+
+  const loadDashboardData = useCallback(async (token: string) => {
+    setIsLoadingEvents(true);
+
+    try {
+      const [profileResponse, eventsResponse, clubsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/events/my-club-events`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/clubs/my-managed-clubs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if ([profileResponse, eventsResponse, clubsResponse].some((response) => response.status === 401)) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json();
+        setFirstName(profile.first_name || '');
+        setLastName(profile.last_name || '');
+      }
+
+      if (eventsResponse.ok) {
+        setEvents((await eventsResponse.json()) as DashboardEvent[]);
+      } else {
+        setEvents([]);
+        setEventMessage('Unable to load your events.');
+      }
+
+      if (clubsResponse.ok) {
+        const clubs = (await clubsResponse.json()) as ManagedClub[];
+        setManagedClubs(clubs);
+        setEventForm((current) => ({
+          ...current,
+          clubId: current.clubId || (clubs[0]?.club_id ? String(clubs[0].club_id) : ''),
+        }));
+      } else {
+        setManagedClubs([]);
+      }
+    } catch {
+      setEventMessage('Unable to load dashboard data right now.');
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }, [handleUnauthorized]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    Promise.resolve().then(() => loadDashboardData(token));
+  }, [loadDashboardData, router]);
+
   const toggleSetting = (key: string) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
   };
 
   const handleSignOut = () => {
@@ -61,90 +146,301 @@ export default function UserDashboardPage() {
     router.push('/login');
   };
 
+  function handleEventFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    setEventForm({
+      ...eventForm,
+      [e.target.name]: e.target.value,
+    });
+  }
+
+  async function handleCreateEvent(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    const clubId = Number(eventForm.clubId);
+    const eventName = eventForm.eventName.trim();
+
+    if (!clubId || !eventName || !eventForm.eventDate) {
+      setEventMessage('Club, event name, and date are required.');
+      return;
+    }
+
+    setIsSubmittingEvent(true);
+    setEventMessage('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          club_id: clubId,
+          event_name: eventName,
+          description: eventForm.description.trim(),
+          event_date: new Date(eventForm.eventDate).toISOString(),
+          location: eventForm.location.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!response.ok) {
+        setEventMessage(data.message || 'Unable to create event.');
+        return;
+      }
+
+      setEventForm((current) => ({
+        clubId: current.clubId,
+        eventName: '',
+        description: '',
+        eventDate: '',
+        location: '',
+      }));
+      setEventMessage(data.message || 'Event created successfully.');
+      await loadDashboardData(token);
+    } catch {
+      setEventMessage('Unable to create event right now.');
+    } finally {
+      setIsSubmittingEvent(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                </svg>
-              </div>
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">CampusConnect</span>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/campusconnect-logo.png"
+                alt="CampusConnect"
+                width={156}
+                height={72}
+                priority
+                className="h-12 w-auto object-contain"
+              />
             </Link>
-            
-            <div className="flex items-center gap-4">
-              <div
-                className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
-                style={{ backgroundColor: '#FE3B5E' }}
-              >
-                {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : ''}
-              </div>
+
+            <div
+              className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
+              style={{ backgroundColor: '#FE3B5E' }}
+            >
+              {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : ''}
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {firstName}!</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Here&apos;s what&apos;s happening with your account</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {firstName || 'there'}!</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Here&apos;s what&apos;s happening with your clubs and account</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Your Current Events */}
-          <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Your current events</h2>
-              <div className="space-y-4">
-                {userEvents.map((event) => (
-                  <div key={event.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{event.title}</h3>
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span>{event.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span>{event.date}</span>
+          <div className="lg:col-span-2 space-y-8">
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Your Clubs</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Club events</h2>
+                </div>
+                <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {events.length} {events.length === 1 ? 'event' : 'events'}
+                </span>
+              </div>
+
+              {isLoadingEvents ? (
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Loading your events...</p>
+              ) : events.length > 0 ? (
+                <div className="space-y-4">
+                  {events.map((event) => (
+                    <article key={event.event_id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{event.event_name}</h3>
+                          <p className="mt-1 text-sm font-medium text-red-600">{event.club_name}</p>
+                          {event.description && (
+                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-3">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{event.location || 'York University'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{formatEventDate(event.event_date)}</span>
+                          </div>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'Registered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {event.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No club events yet</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Events from clubs you belong to will appear here.</p>
+                </div>
+              )}
+
               <Link href="/events-this-week">
                 <button className="mt-4 text-red-600 hover:text-red-700 font-medium">
-                  Browse more events →
+                  Browse more events &rarr;
                 </button>
               </Link>
-            </div>
+            </section>
+
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <div className="mb-6">
+                <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Create</p>
+                <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Add an event</h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Events can be created for clubs where you are an admin or representative.
+                </p>
+              </div>
+
+              {managedClubs.length > 0 ? (
+                <form className="grid grid-cols-1 gap-5 md:grid-cols-2" onSubmit={handleCreateEvent}>
+                  <div>
+                    <label htmlFor="clubId" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                      Club
+                    </label>
+                    <select
+                      id="clubId"
+                      name="clubId"
+                      value={eventForm.clubId}
+                      onChange={handleEventFormChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      required
+                    >
+                      {managedClubs.map((club) => (
+                        <option key={club.club_id} value={club.club_id}>
+                          {club.club_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="eventDate" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                      Date and Time
+                    </label>
+                    <input
+                      id="eventDate"
+                      name="eventDate"
+                      type="datetime-local"
+                      value={eventForm.eventDate}
+                      onChange={handleEventFormChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="eventName" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                      Event Name
+                    </label>
+                    <input
+                      id="eventName"
+                      name="eventName"
+                      type="text"
+                      value={eventForm.eventName}
+                      onChange={handleEventFormChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      placeholder="Campus mixer"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="location" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                      Location
+                    </label>
+                    <input
+                      id="location"
+                      name="location"
+                      type="text"
+                      value={eventForm.location}
+                      onChange={handleEventFormChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      placeholder="Student Centre"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                      Description
+                    </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      value={eventForm.description}
+                      onChange={handleEventFormChange}
+                      className="min-h-28 w-full resize-y rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      placeholder="A short summary of the event."
+                    />
+                  </div>
+
+                  {eventMessage && (
+                    <p className="md:col-span-2 rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300" aria-live="polite">
+                      {eventMessage}
+                    </p>
+                  )}
+
+                  <div className="md:col-span-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingEvent}
+                      className="rounded-lg bg-red-600 px-5 py-3 font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    >
+                      {isSubmittingEvent ? 'Creating...' : 'Create Event'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No managed clubs</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create or manage a club before adding events.</p>
+                  <Link
+                    href="/userclubs"
+                    className="mt-5 inline-flex rounded-lg bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
+                  >
+                    Manage Clubs
+                  </Link>
+                </div>
+              )}
+            </section>
           </div>
 
-          {/* Settings */}
           <div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Settings</h2>
-              
+
               <div className="space-y-6">
-                {/* Notifications */}
+                <Link
+                  href="/userclubs"
+                  className="block w-full rounded-lg bg-red-600 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-red-700"
+                >
+                  Manage Clubs
+                </Link>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Notifications</h3>
@@ -162,7 +458,6 @@ export default function UserDashboardPage() {
                   </button>
                 </div>
 
-                {/* Email Updates */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Email Updates</h3>
@@ -180,7 +475,6 @@ export default function UserDashboardPage() {
                   </button>
                 </div>
 
-                {/* Event Reminders */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Event Reminders</h3>
@@ -198,7 +492,6 @@ export default function UserDashboardPage() {
                   </button>
                 </div>
 
-                {/* Public Profile */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Public Profile</h3>
@@ -216,7 +509,6 @@ export default function UserDashboardPage() {
                   </button>
                 </div>
 
-                {/* Dark Mode */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Dark Mode</h3>
@@ -234,23 +526,21 @@ export default function UserDashboardPage() {
                   </button>
                 </div>
 
-                {/* Language */}
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white mb-2">Language</h3>
                   <select
                     value={settings.language}
-                    onChange={(e) => setSettings(prev => ({ ...prev, language: e.target.value }))}
+                    onChange={(e) => setSettings((prev) => ({ ...prev, language: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 text-black dark:text-white dark:bg-gray-700"
                   >
                     <option value="en">English</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="zh">中文</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
                   </select>
                 </div>
 
-                {/* Account Actions */}
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                   <button className="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Edit Profile

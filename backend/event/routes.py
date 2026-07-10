@@ -5,9 +5,21 @@ from club.club import Club
 from userclub.userclub import UserClub
 from userevent.userevent import UserEvent
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 
 event_bp = Blueprint('event', __name__, url_prefix='/events')
+
+
+def serialize_event(event):
+    return {
+        'event_id': event.event_id,
+        'club_id': event.club_id,
+        'club_name': event.club.club_name,
+        'event_name': event.event_name,
+        'description': event.description,
+        'event_date': event.event_date.isoformat(),
+        'location': event.location
+    }
 
 """
 Endpoint to create a new event. This endpoint is accessible only to users who are members of the club (Admin or Club Representative).
@@ -64,16 +76,54 @@ def get_events():
     
     # Query all events and return their details in a JSON format.
     events = Event.query.all()
-    events_data = [{
-        'event_id': event.event_id,
-        'club_id': event.club_id,
-        'club_name': event.club.club_name,
-        'event_name': event.event_name,
-        'description': event.description,
-        'event_date': event.event_date.isoformat(),
-        'location': event.location
-    } for event in events]
+    events_data = [serialize_event(event) for event in events]
     return jsonify(events_data), 200
+
+
+# Public endpoint for homepage event discovery.
+@event_bp.route('/public', methods=['GET'])
+def get_public_events():
+    events = Event.query.order_by(Event.event_date.asc()).all()
+    return jsonify([serialize_event(event) for event in events]), 200
+
+
+# Public endpoint for events happening during the current Monday-Sunday week.
+@event_bp.route('/this-week', methods=['GET'])
+def get_events_this_week():
+    today = datetime.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+
+    start_datetime = datetime.combine(week_start, time.min)
+    end_datetime = datetime.combine(week_end, time.min)
+
+    events = (
+        Event.query
+        .filter(Event.event_date >= start_datetime, Event.event_date < end_datetime)
+        .order_by(Event.event_date.asc())
+        .all()
+    )
+    return jsonify([serialize_event(event) for event in events]), 200
+
+
+# Endpoint to get events for clubs the current user belongs to.
+@event_bp.route('/my-club-events', methods=['GET'])
+@jwt_required()
+def get_my_club_events():
+    current_user_id = int(get_jwt_identity())
+    memberships = UserClub.query.filter_by(user_id=current_user_id).all()
+    club_ids = [membership.club_id for membership in memberships]
+
+    if not club_ids:
+        return jsonify([]), 200
+
+    events = (
+        Event.query
+        .filter(Event.club_id.in_(club_ids))
+        .order_by(Event.event_date.asc())
+        .all()
+    )
+    return jsonify([serialize_event(event) for event in events]), 200
 
 
 # Endpoint to get a specific event by ID. This endpoint is accessible to all authenticated users.
