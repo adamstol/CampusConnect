@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 interface ClubCardProps {
+  id: number;
   name: string;
   description: string;
   category: string;
   location: string;
 }
 
-export default function ClubCard({ name, description, category, location }: ClubCardProps) {
+export default function ClubCard({ id, name, description, category, location }: ClubCardProps) {
   const [joined, setJoined] = useState(false);
 
   return (
@@ -32,16 +34,24 @@ export default function ClubCard({ name, description, category, location }: Club
           </svg>
           <span>{location}</span>
         </div>
-        <button
-          onClick={() => setJoined((prev) => !prev)}
-          className={
-            joined
-              ? 'w-full py-2 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
-              : 'w-full py-2 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors'
-          }
-        >
-          {joined ? 'Joined' : 'Join Club'}
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href={`/clubs/${id}`}
+            className="flex-1 py-2 rounded-full font-medium text-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            View
+          </Link>
+          <button
+            onClick={() => setJoined((prev) => !prev)}
+            className={
+              joined
+                ? 'flex-1 py-2 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
+                : 'flex-1 py-2 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors'
+            }
+          >
+            {joined ? 'Joined' : 'Join Club'}
+          </button>
+        </div>
       </div>
     </div>
   );
