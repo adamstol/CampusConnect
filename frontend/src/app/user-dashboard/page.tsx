@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 
 interface DashboardEvent {
   event_id: number;
@@ -44,6 +45,7 @@ function formatEventDate(date: string) {
 
 export default function UserDashboardPage() {
   const router = useRouter();
+  const { isDark, toggleDark, resetTheme } = useTheme();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [events, setEvents] = useState<DashboardEvent[]>([]);
@@ -64,14 +66,14 @@ export default function UserDashboardPage() {
     emailUpdates: true,
     eventReminders: true,
     publicProfile: false,
-    darkMode: false,
     language: 'en',
   });
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem('access_token');
+    resetTheme();
     router.push('/login');
-  }, [router]);
+  }, [resetTheme, router]);
 
   const loadDashboardData = useCallback(async (token: string) => {
     setIsLoadingEvents(true);
@@ -141,6 +143,7 @@ export default function UserDashboardPage() {
 
   const handleSignOut = () => {
     localStorage.removeItem('access_token');
+    resetTheme();
     router.push('/login');
   };
 
@@ -216,8 +219,8 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center">
@@ -243,44 +246,44 @@ export default function UserDashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {firstName || 'there'}!</h1>
-          <p className="text-gray-900 mt-2">Here&apos;s what&apos;s happening with your clubs and account</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {firstName || 'there'}!</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Here&apos;s what&apos;s happening with your clubs and account</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <section className="bg-white rounded-lg shadow-md p-6">
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Your Clubs</p>
-                  <h2 className="text-xl font-semibold text-gray-900">Club events</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Club events</h2>
                 </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
+                <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
                   {events.length} {events.length === 1 ? 'event' : 'events'}
                 </span>
               </div>
 
               {isLoadingEvents ? (
-                <p className="text-sm font-semibold text-gray-600">Loading your events...</p>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Loading your events...</p>
               ) : events.length > 0 ? (
                 <div className="space-y-4">
                   {events.map((event) => (
-                    <article key={event.event_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <article key={event.event_id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start gap-4">
                         <div>
-                          <h3 className="font-semibold text-gray-900">{event.event_name}</h3>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{event.event_name}</h3>
                           <p className="mt-1 text-sm font-medium text-red-600">{event.club_name}</p>
                           {event.description && (
-                            <p className="mt-2 text-sm text-gray-600">{event.description}</p>
+                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
                           )}
-                          <div className="flex items-center gap-2 text-gray-600 text-sm mt-3">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-3">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <span>{event.location || 'York University'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-600 text-sm mt-1">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -292,9 +295,9 @@ export default function UserDashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-                  <h3 className="text-lg font-bold text-gray-900">No club events yet</h3>
-                  <p className="mt-2 text-sm text-gray-600">Events from clubs you belong to will appear here.</p>
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No club events yet</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Events from clubs you belong to will appear here.</p>
                 </div>
               )}
 
@@ -305,11 +308,11 @@ export default function UserDashboardPage() {
               </Link>
             </section>
 
-            <section className="bg-white rounded-lg shadow-md p-6">
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-6">
                 <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Create</p>
-                <h2 className="mt-1 text-xl font-semibold text-gray-900">Add an event</h2>
-                <p className="mt-2 text-sm text-gray-600">
+                <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Add an event</h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Events can be created for clubs where you are an admin or representative.
                 </p>
               </div>
@@ -317,7 +320,7 @@ export default function UserDashboardPage() {
               {managedClubs.length > 0 ? (
                 <form className="grid grid-cols-1 gap-5 md:grid-cols-2" onSubmit={handleCreateEvent}>
                   <div>
-                    <label htmlFor="clubId" className="mb-2 block text-sm font-semibold text-gray-900">
+                    <label htmlFor="clubId" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                       Club
                     </label>
                     <select
@@ -325,7 +328,7 @@ export default function UserDashboardPage() {
                       name="clubId"
                       value={eventForm.clubId}
                       onChange={handleEventFormChange}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
                       required
                     >
                       {managedClubs.map((club) => (
@@ -337,7 +340,7 @@ export default function UserDashboardPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="eventDate" className="mb-2 block text-sm font-semibold text-gray-900">
+                    <label htmlFor="eventDate" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                       Date and Time
                     </label>
                     <input
@@ -346,13 +349,13 @@ export default function UserDashboardPage() {
                       type="datetime-local"
                       value={eventForm.eventDate}
                       onChange={handleEventFormChange}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
                       required
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="eventName" className="mb-2 block text-sm font-semibold text-gray-900">
+                    <label htmlFor="eventName" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                       Event Name
                     </label>
                     <input
@@ -361,14 +364,14 @@ export default function UserDashboardPage() {
                       type="text"
                       value={eventForm.eventName}
                       onChange={handleEventFormChange}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
                       placeholder="Campus mixer"
                       required
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="location" className="mb-2 block text-sm font-semibold text-gray-900">
+                    <label htmlFor="location" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                       Location
                     </label>
                     <input
@@ -377,13 +380,13 @@ export default function UserDashboardPage() {
                       type="text"
                       value={eventForm.location}
                       onChange={handleEventFormChange}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
                       placeholder="Student Centre"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900">
+                    <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                       Description
                     </label>
                     <textarea
@@ -391,13 +394,13 @@ export default function UserDashboardPage() {
                       name="description"
                       value={eventForm.description}
                       onChange={handleEventFormChange}
-                      className="min-h-28 w-full resize-y rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                      className="min-h-28 w-full resize-y rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
                       placeholder="A short summary of the event."
                     />
                   </div>
 
                   {eventMessage && (
-                    <p className="md:col-span-2 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" aria-live="polite">
+                    <p className="md:col-span-2 rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300" aria-live="polite">
                       {eventMessage}
                     </p>
                   )}
@@ -413,9 +416,9 @@ export default function UserDashboardPage() {
                   </div>
                 </form>
               ) : (
-                <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-                  <h3 className="text-lg font-bold text-gray-900">No managed clubs</h3>
-                  <p className="mt-2 text-sm text-gray-600">Create or manage a club before adding events.</p>
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No managed clubs</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create or manage a club before adding events.</p>
                   <Link
                     href="/userclubs"
                     className="mt-5 inline-flex rounded-lg bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
@@ -428,8 +431,8 @@ export default function UserDashboardPage() {
           </div>
 
           <div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Settings</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Settings</h2>
 
               <div className="space-y-6">
                 <Link
@@ -441,13 +444,13 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900">Notifications</h3>
-                    <p className="text-sm text-gray-600">Receive push notifications</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Notifications</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Receive push notifications</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('notifications')}
                     className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.notifications ? 'bg-red-600' : 'bg-gray-300'
+                      settings.notifications ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
@@ -458,13 +461,13 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900">Email Updates</h3>
-                    <p className="text-sm text-gray-600">Weekly event digest</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Email Updates</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Weekly event digest</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('emailUpdates')}
                     className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.emailUpdates ? 'bg-red-600' : 'bg-gray-300'
+                      settings.emailUpdates ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
@@ -475,13 +478,13 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900">Event Reminders</h3>
-                    <p className="text-sm text-gray-600">Remind before events</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Event Reminders</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Remind before events</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('eventReminders')}
                     className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.eventReminders ? 'bg-red-600' : 'bg-gray-300'
+                      settings.eventReminders ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
@@ -492,13 +495,13 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900">Public Profile</h3>
-                    <p className="text-sm text-gray-600">Make profile visible</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Public Profile</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Make profile visible</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('publicProfile')}
                     className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.publicProfile ? 'bg-red-600' : 'bg-gray-300'
+                      settings.publicProfile ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
@@ -509,27 +512,27 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900">Dark Mode</h3>
-                    <p className="text-sm text-gray-600">Switch to dark theme</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Dark Mode</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Switch to dark theme</p>
                   </div>
                   <button
-                    onClick={() => toggleSetting('darkMode')}
+                    onClick={toggleDark}
                     className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.darkMode ? 'bg-red-600' : 'bg-gray-300'
+                      isDark ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      settings.darkMode ? 'translate-x-6' : 'translate-x-0.5'
+                      isDark ? 'translate-x-6' : 'translate-x-0.5'
                     }`} />
                   </button>
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Language</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Language</h3>
                   <select
                     value={settings.language}
                     onChange={(e) => setSettings((prev) => ({ ...prev, language: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 text-black"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 text-black dark:text-white dark:bg-gray-700"
                   >
                     <option value="en">English</option>
                     <option value="es">Spanish</option>
@@ -539,14 +542,14 @@ export default function UserDashboardPage() {
                   </select>
                 </div>
 
-                <div className="pt-4 border-t border-gray-200 space-y-2">
-                  <button className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <button className="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Edit Profile
                   </button>
-                  <button className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button className="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Change Password
                   </button>
-                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                     Sign Out
                   </button>
                 </div>
