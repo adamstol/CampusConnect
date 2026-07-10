@@ -9,13 +9,13 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState('');
   const [verified, setVerified] = useState(false);
   const router = useRouter();
-
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    
     try {
       const response = await fetch(
-        `http://localhost:5000/auth/verify-email?token=${encodeURIComponent(token.trim())}`,
+        `${apiUrl}/auth/verify-email?token=${encodeURIComponent(token.trim())}`,
         { method: 'GET' }
       );
 
