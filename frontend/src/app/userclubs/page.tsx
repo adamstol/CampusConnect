@@ -132,35 +132,35 @@ export default function UserClubsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/user-dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded bg-red-600">
               <span className="text-sm font-bold text-white">CC</span>
             </div>
-            <span className="text-xl font-semibold text-gray-900">CampusConnect</span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-white">CampusConnect</span>
           </Link>
 
-          <Link href="/user-dashboard" className="text-sm font-semibold text-gray-600 hover:text-gray-900">
+          <Link href="/user-dashboard" className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
             Dashboard
           </Link>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8">
-        <section className="rounded-lg bg-white p-6 shadow-md">
+        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
           <div className="mb-6">
-            <p className="text-sm font-semibold uppercase tracking-wide text-red-600">UserClubs</p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900">Create a club</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">UserClubs</p>
+            <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Create a club</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               New clubs are added to your memberships with you as the club admin.
             </p>
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="clubName" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="clubName" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                 Club Name
               </label>
               <input
@@ -169,14 +169,14 @@ export default function UserClubsPage() {
                 type="text"
                 value={formData.clubName}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30"
                 placeholder="Computer Science Club"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900">
+              <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
                 Description
               </label>
               <textarea
@@ -184,13 +184,13 @@ export default function UserClubsPage() {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="min-h-32 w-full resize-y rounded-lg border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                className="min-h-32 w-full resize-y rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30"
                 placeholder="A short summary of the club."
               />
             </div>
 
             {message && (
-              <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" aria-live="polite">
+              <p className="rounded-lg bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-400" aria-live="polite">
                 {message}
               </p>
             )}
@@ -205,31 +205,31 @@ export default function UserClubsPage() {
           </form>
         </section>
 
-        <section className="rounded-lg bg-white p-6 shadow-md">
+        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Memberships</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">Your clubs</h2>
+              <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Memberships</p>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">Your clubs</h2>
             </div>
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
+            <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
               {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'}
             </span>
           </div>
 
           {isLoading ? (
-            <p className="text-sm font-semibold text-gray-600">Loading clubs...</p>
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Loading clubs...</p>
           ) : clubs.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {clubs.map((club) => (
-                <article key={club.club_id} className="rounded-lg border border-gray-200 p-4">
+                <article key={club.club_id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">{club.club_name}</h3>
-                      <p className="mt-1 text-sm text-gray-600">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{club.club_name}</h3>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                         Joined {new Date(club.joined_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-700">
+                    <span className="rounded-full bg-red-50 dark:bg-red-900/30 px-3 py-1 text-xs font-bold uppercase text-red-700 dark:text-red-400">
                       {club.role}
                     </span>
                   </div>
@@ -237,9 +237,9 @@ export default function UserClubsPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-              <h3 className="text-lg font-bold text-gray-900">No clubs yet</h3>
-              <p className="mt-2 text-sm text-gray-600">Create your first club to see it here.</p>
+            <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">No clubs yet</h3>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create your first club to see it here.</p>
             </div>
           )}
         </section>
