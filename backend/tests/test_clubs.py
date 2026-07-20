@@ -137,3 +137,26 @@ def test_submit_club_application_tc011(client, auth_headers):
     data = response.get_json()
     assert data.get("message") == "Club created successfully"
     assert "club_id" in data
+
+@pytest.mark.rtm("S-05")
+def test_submit_duplicate_club_application_tc012(client, auth_headers):
+    """
+    TC-012 (S-05): Submitting a duplicate/conflicting club application
+    Requirement: 400 Bad Request when attempting to create a club with an existing name.
+    """
+    payload = {
+        "club_name": "Chess Club",
+        "description": "A club for strategy and chess lovers."
+    }
+
+    # 1. First submission succeeds (201 Created)
+    first_res = client.post('/clubs/', json=payload, headers=auth_headers)
+    assert first_res.status_code == 201
+
+    # 2. Second submission with identical club_name should fail (400 Bad Request)
+    second_res = client.post('/clubs/', json=payload, headers=auth_headers)
+    assert second_res.status_code == 400
+
+    # 3. Assert error message
+    data = second_res.get_json()
+    assert data.get("message") == "Club name already exists"
