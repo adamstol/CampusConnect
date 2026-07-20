@@ -47,3 +47,19 @@ def test_list_all_active_clubs_tc006(client, auth_headers, seed_clubs):
     assert 'club_id' in first_club
     assert 'club_name' in first_club
     assert 'description' in first_club
+
+@pytest.mark.rtm("S-03")
+def test_get_specific_club_by_id_tc007(client, auth_headers, seed_clubs):
+    """
+    TC-007 (S-03): Get a specific club by ID via /clubs/<int:club_id> endpoint
+    Requirement: 200 OK response with the matching club object.
+    """
+    target_club_id = seed_clubs[0]
+    response = client.get(f'/clubs/{target_club_id}', headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.get_json()
+
+    assert data['club_id'] == target_club_id
+    assert data['club_name'] == "Chess Club"
+    assert data['description'] == "Competitive and casual chess play"
