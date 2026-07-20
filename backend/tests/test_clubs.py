@@ -2,7 +2,7 @@ import pytest
 from flask_jwt_extended import create_access_token
 from club.club import Club
 from extensions import db
-
+from userclub.userclub import UserClub
 
 @pytest.fixture
 def auth_headers(app):
@@ -63,3 +63,27 @@ def test_get_specific_club_by_id_tc007(client, auth_headers, seed_clubs):
     assert data['club_id'] == target_club_id
     assert data['club_name'] == "Chess Club"
     assert data['description'] == "Competitive and casual chess play"
+
+
+@pytest.mark.rtm("S-04")
+def test_join_club_creates_membership_tc008(client, auth_headers, seed_clubs, app):
+    """
+    TC-008 (S-04): Join a club creates a membership record
+    Requirement: 200 OK response and database membership row created upon joining.
+    """
+    target_club_id = seed_clubs[0]
+
+    # Send POST request to join club
+    response = client.post(f'/clubs/{target_club_id}/join', headers=auth_headers)
+
+    # 1. Assert status code 200 OK
+    assert response.status_code == 200
+
+    # 2. Assert response message
+    data = response.get_json()
+    assert data.get("message") == "Joined club successfully"
+
+    # 3. Verify membership row actually exists in database (user_id=1 from auth_headers)
+    with app.app_context():
+        membership = UserClub.query.filter_by(user_id=1, club_id=target_club_id).first()
+        assert membership is not None
