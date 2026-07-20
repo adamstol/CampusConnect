@@ -180,3 +180,58 @@ def test_register_then_cancel_reflected_in_attendee_count_tc019(client, auth_hea
     after_cancel = client.get(f'/events/{target_event_id}/registration-count', headers=auth_headers_user42).get_json()
     assert after_cancel["attending"] == 0
     assert after_cancel["total"] == 0
+@pytest.mark.rtm("S-10")
+def test_get_my_events_for_current_user_tc022(client, auth_headers_user42, app):
+    """
+    TC-022 (S-10): Get event registrations for the current user
+    Requirement: 200 OK response listing only events the user registered for.
+    Note: There is no /users/{id}/events route — get_my_events() derives the
+    user from the JWT identity via GET /events/my-events. Adjusted from the
+    original spec, which described a path-param route that doesn't exist.
+    """
+    with app.app_context():
+        club = Club(club_name="Chess Club", description="Competitive and casual chess play")
+        db.session.add(club)
+        db.session.commit()
+        e1 = Event(club_id=club.club_id, event_name="Blitz Night",
+                    description="Casual blitz", event_date=datetime(2026, 8, 5, tzinfo=timezone.utc),
+                    location="Room 204")
+        e2 = Event(club_id=club.club_id, event_name="Chess Tournament",
+                    description="Ranked play", event_date=datetime(2026, 9, 12, tzinfo=timezone.utc),
+                    location="Gymnasium")
+        e3 = Event(club_id=club.club_id, event_name="Robotics Demo",
+                    description="Not registered for this one", event_date=datetime(2026, 10, 1, tzinfo=timezone.utc),
+                    location="Engineering Lab")
+        db.session.add_all([e1, e2, e3])
+        db.session.commit()
+
+        # user 42 registers for e1 and e2 only, leaving e3 unregistered
+        db.session.add_all([
+            UserEvent(user_id=42, event_id=e1.event_id),
+            UserEvent(user_id=42, event_id=e2.event_id),
+        ])
+        db.session.commit()
+
+        registered_event_ids = {e1.event_id, e2.event_id}
+
+    response = client.get('/events/my-events', headers=auth_headers_user42)
+
+    assert response.status_code == 200
+    data = response.get_json()
+
+    # Only the 2 events user 42 registered for should be returned, not the third
+    assert isinstance(data, list)
+    assert len(data) == 2
+    returned_event_ids = {event['event_id'] for event in data}
+    assert returned_event_ids == registered_event_ids
+
+    # Schema check (matches get_my_events serialization)
+    first = data[0]
+    assert 'event_id' in first
+    assert 'event_name' in first
+    assert 'club_id' in first
+    assert 'club_name' in first
+    assert 'event_date' in first
+    assert 'location' in first
+    assert 'status' in first
+    assert 'registered_at' in first
