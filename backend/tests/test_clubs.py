@@ -115,3 +115,25 @@ def test_leave_club_removes_membership_tc009(client, auth_headers, seed_clubs, a
     with app.app_context():
         membership = UserClub.query.filter_by(user_id=1, club_id=target_club_id).first()
         assert membership is None
+
+@pytest.mark.rtm("S-05")
+def test_submit_club_application_tc011(client, auth_headers):
+    """
+    TC-011 (S-05): Submit new club application with valid details
+    Requirement: 201 Created response and club record created upon submission.
+    """
+    payload = {
+        "club_name": "Robotics Club",
+        "description": "Building autonomous robots and competing in intercollegiate leagues."
+    }
+
+    # POST request to /clubs/
+    response = client.post('/clubs/', json=payload, headers=auth_headers)
+
+    # 1. Assert status code 201 Created
+    assert response.status_code == 201
+
+    # 2. Assert response message and returned club_id
+    data = response.get_json()
+    assert data.get("message") == "Club created successfully"
+    assert "club_id" in data
