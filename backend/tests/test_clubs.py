@@ -224,3 +224,50 @@ def test_get_club_details_tc013(client, auth_headers, seed_clubs, app):
     assert "club_name" in data or "name" in data
     assert "description" in data
     assert data["description"] is not None
+
+
+@pytest.mark.rtm("S-09")
+def test_get_user_memberships_tc020(client, auth_headers, seed_clubs, app):
+    """
+    TC-020 (S-09): Get memberships for the current user
+    Requirement: 200 OK response listing only clubs the user has joined.
+    """
+    target_club_id = seed_clubs[0]
+    unjoined_club_id = seed_clubs[1] if len(seed_clubs) > 1 else None
+
+    # The auth_headers fixture uses identity="1"
+    test_user_id = 1
+
+    # 1. Seed a membership record tying the user to ONLY the target club
+    with app.app_context():
+        membership = UserClub(
+            user_id=test_user_id,
+            club_id=target_club_id,
+            role="member",
+            joined_at=datetime.now(timezone.utc)
+        )
+        db.session.add(membership)
+        db.session.commit()
+
+    # 2. Execute GET request
+    # IMPORTANT: If your club blueprint doesn't use a '/clubs' prefix, change this to just '/my-clubs'
+    response = client.get('/clubs/my-clubs', headers=auth_headers)
+
+    # 3. Assert status code 200 OK
+    assert response.status_code == 200
+
+    # 4. Assert response payload matches the route's exact JSON structure
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 1
+
+    joined_club = data[0]
+    assert joined_club["club_id"] == target_club_id
+    assert "club_name" in joined_club
+    assert joined_club["role"] == "member"
+    assert "joined_at" in joined_club
+
+    # 5. Ensure the unjoined club is explicitly NOT in the response
+    if unjoined_club_id:
+        returned_club_ids = [club["club_id"] for club in data]
+        assert unjoined_club_id not in returned_club_ids
