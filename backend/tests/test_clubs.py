@@ -87,3 +87,31 @@ def test_join_club_creates_membership_tc008(client, auth_headers, seed_clubs, ap
     with app.app_context():
         membership = UserClub.query.filter_by(user_id=1, club_id=target_club_id).first()
         assert membership is not None
+
+@pytest.mark.rtm("S-04")
+def test_leave_club_removes_membership_tc009(client, auth_headers, seed_clubs, app):
+    """
+    TC-009 (S-04): Leave a club removes the membership record
+    Requirement: 200 OK response and database membership row removed upon leaving.
+    """
+    target_club_id = seed_clubs[0]
+
+    # 1. First, join the club to establish a active membership record
+    join_res = client.post(f'/clubs/{target_club_id}/join', headers=auth_headers)
+    assert join_res.status_code == 200
+
+    # Verify membership exists in DB
+    with app.app_context():
+        membership = UserClub.query.filter_by(user_id=1, club_id=target_club_id).first()
+        assert membership is not None
+
+    # 2. Perform POST request to leave the club
+    response = client.post(f'/clubs/{target_club_id}/leave', headers=auth_headers)
+
+    # 3. Assert status code 200 OK
+    assert response.status_code == 200
+
+    # 4. Verify membership row was actually deleted from database
+    with app.app_context():
+        membership = UserClub.query.filter_by(user_id=1, club_id=target_club_id).first()
+        assert membership is None
