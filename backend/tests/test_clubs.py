@@ -3,6 +3,7 @@ from flask_jwt_extended import create_access_token
 from club.club import Club
 from extensions import db
 from userclub.userclub import UserClub
+from event.event import Event
 
 @pytest.fixture
 def auth_headers(app):
@@ -160,3 +161,66 @@ def test_submit_duplicate_club_application_tc012(client, auth_headers):
     # 3. Assert error message
     data = second_res.get_json()
     assert data.get("message") == "Club name already exists"
+
+@pytest.mark.rtm("S-06")
+def test_get_club_details_tc013(client, seed_clubs):
+    """
+    TC-013 (S-06): Get club details returns description and metadata
+    Requirement: 200 OK response including club description and metadata fields.
+    """
+    target_club_id = seed_clubs[0]
+
+    # Perform GET request to fetch club details by ID
+    response = client.get(f'/clubs/{target_club_id}')
+
+    # 1. Assert status code 200 OK
+    assert response.status_code == 200
+
+    # 2. Assert response body contains metadata and description fields
+    data = response.get_json()
+    assert isinstance(data, dict)
+    assert "club_id" in data or "id" in data
+    assert "club_name" in data or "name" in data
+    assert "description" in data
+
+from datetime import datetime, timezone
+import pytest
+from event.event import Event
+from extensions import db
+
+
+@pytest.mark.rtm("S-06")
+def test_get_club_details_tc013(client, auth_headers, seed_clubs, app):
+    """
+    TC-013 (S-06): Get club details returns description and metadata
+    Requirement: 200 OK response containing club description and metadata.
+    """
+    target_club_id = seed_clubs[0]
+
+    # 1. Seed an event tied to this club using the model schema
+    with app.app_context():
+        sample_event = Event(
+            club_id=target_club_id,
+            event_name="Robotics Workshop",
+            description="Hands-on intro to microcontrollers and sensor wiring.",
+            event_date=datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc),
+            location="Engineering Lab 2"
+        )
+        db.session.add(sample_event)
+        db.session.commit()
+
+    # 2. Perform GET request to fetch club details by ID
+    response = client.get(f'/clubs/{target_club_id}', headers=auth_headers)
+
+    # 3. Assert status code 200 OK
+    assert response.status_code == 200
+
+    # 4. Assert response payload structure and metadata values
+    data = response.get_json()
+    assert isinstance(data, dict)
+
+    # Verify key metadata fields
+    assert "club_id" in data or "id" in data
+    assert "club_name" in data or "name" in data
+    assert "description" in data
+    assert data["description"] is not None
