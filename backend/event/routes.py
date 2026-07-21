@@ -6,6 +6,7 @@ from userclub.userclub import UserClub
 from userevent.userevent import UserEvent
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, time, timedelta, timezone
+from auth.user import User
 
 event_bp = Blueprint('event', __name__, url_prefix='/events')
 
@@ -186,22 +187,23 @@ def update_event(event_id):
 @event_bp.route('/<int:event_id>', methods=['DELETE'])
 @jwt_required()
 def delete_event(event_id):
-    
-    # Get the JWT identity and query the event by ID.
     current_user_id = int(get_jwt_identity())
     event = db.session.get(Event, event_id)
     if not event:
         return jsonify({'message': 'Event not found'}), 404
 
-    # Check if the user is a member of the club with admin or representative role
     user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=event.club_id).first()
-    if not user_club or user_club.role not in ['admin', 'representative']:
+    is_owner = user_club is not None and user_club.role in ['admin', 'representative']
+
+    requesting_user = db.session.get(User, current_user_id)
+    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'Administrator'
+
+    if not (is_owner or is_platform_admin):
         return jsonify({'message': 'Unauthorized: Only admins and representatives can update events'}), 403
 
     db.session.delete(event)
     db.session.commit()
     return jsonify({'message': 'Event deleted successfully'}), 200
-
 
 # Endpoint to get all events for a specific club. This endpoint is accessible to all authenticated users.
 @event_bp.route('/club/<int:club_id>', methods=['GET'])
