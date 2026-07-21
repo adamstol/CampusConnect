@@ -6,6 +6,8 @@ from userclub.userclub import UserClub
 from event.event import Event
 from announcement.announcement import Announcement
 from flask_jwt_extended import create_access_token
+from userevent.userevent import UserEvent
+
 @pytest.fixture
 def auth_headers_rep5(app):
     """Generate valid JWT Authorization headers for rep_id=5."""
@@ -274,3 +276,35 @@ def test_create_announcement_for_owned_club_tc036(client, auth_headers_rep5, see
         assert announcement.club_id == target_club_id
         assert announcement.created_by == 5
         assert announcement.title == "Practice Schedule Update"
+
+@pytest.mark.rtm("CR-04")
+def test_add_and_remove_event_attendee_tc034(client, auth_headers_rep5, seed_event_owned_by_rep5, app):
+    """
+    TC-034 (CR-04): Add/remove an attendee from an owned club's event
+    Requirement: Registration record added/removed as requested.
+    Note: register_for_event/cancel_registration only act on the caller's own
+    JWT identity — there was no endpoint for a rep to manage someone else's
+    registration. This exercises the new admin/rep-only
+    POST/DELETE /events/{event_id}/attendees/{user_id} routes.
+    """
+    target_event_id = seed_event_owned_by_rep5
+    target_user_id = 42
+
+    # 1. Rep adds user 42 as an attendee
+    add_res = client.post(f'/events/{target_event_id}/attendees/{target_user_id}', headers=auth_headers_rep5)
+    assert add_res.status_code == 201
+    assert add_res.get_json().get("message") == "Attendee added successfully"
+
+    with app.app_context():
+        registration = UserEvent.query.filter_by(user_id=target_user_id, event_id=target_event_id).first()
+        assert registration is not None
+        assert registration.status == "attending"
+
+    # 2. Rep removes user 42 as an attendee
+    remove_res = client.delete(f'/events/{target_event_id}/attendees/{target_user_id}', headers=auth_headers_rep5)
+    assert remove_res.status_code == 200
+    assert remove_res.get_json().get("message") == "Attendee removed successfully"
+
+    with app.app_context():
+        registration = UserEvent.query.filter_by(user_id=target_user_id, event_id=target_event_id).first()
+        assert registration is None
