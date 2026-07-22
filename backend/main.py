@@ -48,7 +48,7 @@ app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
 
-# Drop all tables and recreate from scratch on every startup
+# Create tables that don't exist yet on startup
 with app.app_context():
     db.create_all()
 
