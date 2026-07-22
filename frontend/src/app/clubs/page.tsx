@@ -18,7 +18,7 @@ export default function ClubsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/clubs/public`)
+    fetch(`${API_BASE_URL}/clubs/`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data: Club[]) => setClubs(data))
       .catch(() => setError('Unable to load clubs right now. Please try again later.'))
