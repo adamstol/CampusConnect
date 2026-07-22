@@ -43,9 +43,17 @@ def create_club():
 @club_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_clubs():
-    
+
     # Query all clubs and return their details in a JSON format.
     clubs = Club.query.all()
+    clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
+    return jsonify(clubs_data), 200
+
+
+# Public endpoint for club discovery (no authentication required).
+@club_bp.route('/public', methods=['GET'])
+def get_public_clubs():
+    clubs = Club.query.order_by(Club.club_name.asc()).all()
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
 
