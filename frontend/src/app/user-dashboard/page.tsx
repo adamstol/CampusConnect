@@ -441,6 +441,20 @@ export default function UserDashboardPage() {
                   Manage Clubs
                 </Link>
 
+                <Link
+                  href="/manage-events"
+                  className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Manage Events
+                </Link>
+
+                <Link
+                  href="/manage-announcements"
+                  className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Announcements
+                </Link>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">Notifications</h3>
