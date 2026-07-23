@@ -8,3 +8,4 @@ bcrypt
 gunicorn
 flask-mail
 Flask-Migrate
+pytest
