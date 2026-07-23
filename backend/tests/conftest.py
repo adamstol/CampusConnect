@@ -28,7 +28,6 @@ def clean_db(app):
         shared_db.session.remove()
         shared_db.drop_all()    # Cleans the slate after the test finishes
 
-
 @pytest.fixture
 def auth_headers(client, app):
     """Returns headers containing a valid JWT/Auth token for a regular user."""

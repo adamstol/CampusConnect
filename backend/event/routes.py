@@ -4,6 +4,7 @@ from event.event import Event
 from club.club import Club
 from userclub.userclub import UserClub
 from userevent.userevent import UserEvent
+from auth.user import User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, time, timedelta, timezone
 from auth.user import User
@@ -21,6 +22,15 @@ def serialize_event(event):
         'event_date': event.event_date.isoformat(),
         'location': event.location
     }
+
+
+def _can_manage_event(user_id, club_id):
+    """Return True if the user is a club admin/representative or a platform Administrator."""
+    user = db.session.get(User, user_id)
+    if user and user.role_name == 'Administrator':
+        return True
+    user_club = UserClub.query.filter_by(user_id=user_id, club_id=club_id).first()
+    return user_club is not None and user_club.role in ['admin', 'representative']
 
 """
 Endpoint to create a new event. This endpoint is accessible only to users who are members of the club (Admin or Club Representative).
@@ -294,6 +304,53 @@ def get_event_attendees(event_id):
         'registered_at': registration.registered_at.isoformat()
     } for registration in event.user_events]
     return jsonify(attendees), 200
+
+
+# Endpoint for a club rep/admin to register another user for an event on their behalf.
+# Accessible only to the club's Admin, Representative, or a platform Administrator.
+@event_bp.route('/<int:event_id>/attendees/<int:user_id>', methods=['POST'])
+@jwt_required()
+def add_event_attendee(event_id, user_id):
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    if not _can_manage_event(current_user_id, event.club_id):
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can manage attendees'}), 403
+
+    existing_registration = UserEvent.query.filter_by(user_id=user_id, event_id=event_id).first()
+    if existing_registration:
+        return jsonify({'message': 'User is already registered for this event'}), 400
+
+    user_event = UserEvent(user_id=user_id, event_id=event_id)
+    db.session.add(user_event)
+    db.session.commit()
+
+    return jsonify({'message': 'Attendee added successfully'}), 201
+
+
+# Endpoint for a club rep/admin to remove another user's registration from an event.
+# Accessible only to the club's Admin, Representative, or a platform Administrator.
+@event_bp.route('/<int:event_id>/attendees/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def remove_event_attendee(event_id, user_id):
+    current_user_id = int(get_jwt_identity())
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    if not _can_manage_event(current_user_id, event.club_id):
+        return jsonify({'message': 'Unauthorized: Only admins and representatives can manage attendees'}), 403
+
+    registration = UserEvent.query.filter_by(user_id=user_id, event_id=event_id).first()
+    if not registration:
+        return jsonify({'message': 'User is not registered for this event'}), 404
+
+    db.session.delete(registration)
+    db.session.commit()
+
+    return jsonify({'message': 'Attendee removed successfully'}), 200
 
 
 # Endpoint to get all events the current user is registered for. This endpoint is accessible to all authenticated users.
