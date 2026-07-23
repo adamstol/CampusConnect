@@ -18,6 +18,11 @@ def create_club():
     
     #Get the JSON and JWT identity to identify the user creating the club.
     current_user_id = int(get_jwt_identity())
+
+    requesting_user = db.session.get(User, current_user_id)
+    if not requesting_user or requesting_user.role_name not in ('Club Representative', 'Administrator'):
+        return jsonify({'message': 'Unauthorized: Only Club Representatives and Administrators can create clubs'}), 403
+
     data = request.get_json()
     club_name = data.get('club_name')
     description = data.get('description')
@@ -164,7 +169,14 @@ def get_club_members(club_id):
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
-    members = [{'user_id': membership.user_id, 'role': membership.role, 'joined_at': membership.joined_at.isoformat()} for membership in club.user_clubs]
+    members = [{
+        'user_id': membership.user_id,
+        'first_name': membership.user.first_name,
+        'last_name': membership.user.last_name,
+        'email': membership.user.email,
+        'role': membership.role,
+        'joined_at': membership.joined_at.isoformat()
+    } for membership in club.user_clubs]
     return jsonify(members), 200
 
 

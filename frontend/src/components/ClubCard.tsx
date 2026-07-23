@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/lib/api';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface ClubCardProps {
   id: number;
@@ -16,6 +17,8 @@ export default function ClubCard({ id, name, description, initialJoined = false 
   const router = useRouter();
   const [joined, setJoined] = useState(initialJoined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
   // Keep joined in sync if initialJoined updates later (e.g. membership loads after this card renders).
   const [prevInitialJoined, setPrevInitialJoined] = useState(initialJoined);
@@ -24,22 +27,46 @@ export default function ClubCard({ id, name, description, initialJoined = false 
     setJoined(initialJoined);
   }
 
-  async function handleJoinToggle() {
+  function handleJoinToggle() {
     const token = localStorage.getItem('access_token');
     if (!token) {
       router.push('/login?redirect=/clubs');
       return;
     }
+    if (joined) {
+      setLeaveModalOpen(true);
+    } else {
+      setJoinModalOpen(true);
+    }
+  }
 
+  async function executeJoin() {
+    setJoinModalOpen(false);
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/clubs/${id}/${joined ? 'leave' : 'join'}`, {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/clubs/${id}/join`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) {
-        setJoined((prev) => !prev);
-      }
+      if (response.ok) setJoined(true);
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function executeLeave() {
+    setLeaveModalOpen(false);
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/clubs/${id}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setJoined(false);
     } catch {
       // Network error — leave the button in its current state.
     } finally {
@@ -77,6 +104,22 @@ export default function ClubCard({ id, name, description, initialJoined = false 
           </button>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={joinModalOpen}
+        title="Join Club"
+        message={`Join ${name}? You'll receive announcements and can RSVP to events.`}
+        confirmLabel="Join Club"
+        onConfirm={executeJoin}
+        onCancel={() => setJoinModalOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={leaveModalOpen}
+        title="Leave Club"
+        message={`Leave ${name}? You can rejoin at any time.`}
+        confirmLabel="Leave Club"
+        onConfirm={executeLeave}
+        onCancel={() => setLeaveModalOpen(false)}
+      />
     </div>
   );
 }
