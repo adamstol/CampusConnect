@@ -2,15 +2,50 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ClubCardProps {
   id: number;
   name: string;
   description: string;
+  initialJoined?: boolean;
 }
 
-export default function ClubCard({ id, name, description }: ClubCardProps) {
-  const [joined, setJoined] = useState(false);
+export default function ClubCard({ id, name, description, initialJoined = false }: ClubCardProps) {
+  const router = useRouter();
+  const [joined, setJoined] = useState(initialJoined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Keep joined in sync if initialJoined updates later (e.g. membership loads after this card renders).
+  const [prevInitialJoined, setPrevInitialJoined] = useState(initialJoined);
+  if (initialJoined !== prevInitialJoined) {
+    setPrevInitialJoined(initialJoined);
+    setJoined(initialJoined);
+  }
+
+  async function handleJoinToggle() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login?redirect=/clubs');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${id}/${joined ? 'leave' : 'join'}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setJoined((prev) => !prev);
+      }
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
@@ -30,14 +65,15 @@ export default function ClubCard({ id, name, description }: ClubCardProps) {
             View
           </Link>
           <button
-            onClick={() => setJoined((prev) => !prev)}
+            onClick={handleJoinToggle}
+            disabled={isSubmitting}
             className={
               joined
-                ? 'flex-1 py-2 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
-                : 'flex-1 py-2 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors'
+                ? 'flex-1 py-2 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                : 'flex-1 py-2 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50'
             }
           >
-            {joined ? 'Joined' : 'Join Club'}
+            {isSubmitting ? '...' : joined ? 'Joined' : 'Join Club'}
           </button>
         </div>
       </div>

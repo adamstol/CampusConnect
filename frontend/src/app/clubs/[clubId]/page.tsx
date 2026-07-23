@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import EventCard from '@/components/EventCard';
@@ -49,10 +49,12 @@ function formatAnnouncementDate(date: string) {
 
 export default function ClubDetailPage() {
   const params = useParams<{ clubId: string }>();
+  const router = useRouter();
   const [club, setClub] = useState<Club | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
@@ -91,6 +93,43 @@ export default function ClubDetailPage() {
       .catch(() => setAnnouncements([]))
       .finally(() => setIsAnnouncementsLoading(false));
   }, [params.clubId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { club_id: number }[]) => {
+        setJoined(data.some((c) => c.club_id === Number(params.clubId)));
+      })
+      .catch(() => {});
+  }, [params.clubId]);
+
+  async function handleJoinToggle() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push(`/login?redirect=/clubs/${params.clubId}`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/${joined ? 'leave' : 'join'}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setJoined((prev) => !prev);
+      }
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -143,14 +182,15 @@ export default function ClubDetailPage() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">{club.description || 'No description yet.'}</p>
 
             <button
-              onClick={() => setJoined((prev) => !prev)}
+              onClick={handleJoinToggle}
+              disabled={isSubmitting}
               className={
                 joined
-                  ? 'py-2 px-6 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
-                  : 'py-2 px-6 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors'
+                  ? 'py-2 px-6 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                  : 'py-2 px-6 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50'
               }
             >
-              {joined ? 'Leave Club' : 'Join Club'}
+              {isSubmitting ? '...' : joined ? 'Leave Club' : 'Join Club'}
             </button>
           </div>
         </div>

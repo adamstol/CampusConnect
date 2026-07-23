@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
 
-export default function LoginPage() {
+// Only allow redirecting back to a relative in-app path, never an external URL.
+function isSafeRedirect(path: string | null): path is string {
+  return !!path && path.startsWith('/') && !path.startsWith('//');
+}
+
+function LoginForm() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,6 +19,7 @@ export default function LoginPage() {
 
   const [message, setMessage] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { initThemeForUser } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +46,8 @@ export default function LoginPage() {
       if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
         initThemeForUser(formData.email);
-        router.push('/user-dashboard');
+        const redirect = searchParams.get('redirect');
+        router.push(isSafeRedirect(redirect) ? redirect : '/user-dashboard');
       } else {
         setMessage(data.error || 'Login failed. Please try again.');
       }
@@ -126,5 +133,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
