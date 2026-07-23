@@ -14,6 +14,7 @@ interface Club {
 export default function ClubsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [joinedClubIds, setJoinedClubIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,6 +24,18 @@ export default function ClubsPage() {
       .then((data: Club[]) => setClubs(data))
       .catch(() => setError('Unable to load clubs right now. Please try again later.'))
       .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { club_id: number }[]) => setJoinedClubIds(new Set(data.map((c) => c.club_id))))
+      .catch(() => {});
   }, []);
 
   const filteredClubs = clubs.filter((club) =>
@@ -69,6 +82,7 @@ export default function ClubsPage() {
                 id={club.club_id}
                 name={club.club_name}
                 description={club.description || 'No description yet.'}
+                initialJoined={joinedClubIds.has(club.club_id)}
               />
             ))}
           </div>
