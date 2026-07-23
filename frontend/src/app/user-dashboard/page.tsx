@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
+import RoleBadge from '@/components/RoleBadge';
 
 interface DashboardEvent {
   event_id: number;
@@ -18,6 +19,12 @@ interface DashboardEvent {
 }
 
 interface ManagedClub {
+  club_id: number;
+  club_name: string;
+  role: string;
+}
+
+interface MyClub {
   club_id: number;
   club_name: string;
   role: string;
@@ -47,7 +54,9 @@ export default function UserDashboardPage() {
   const { isDark, toggleDark, resetTheme } = useTheme();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [role, setRole] = useState('');
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [myClubs, setMyClubs] = useState<MyClub[]>([]);
   const [managedClubs, setManagedClubs] = useState<ManagedClub[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
@@ -78,7 +87,7 @@ export default function UserDashboardPage() {
     setIsLoadingEvents(true);
 
     try {
-      const [profileResponse, eventsResponse, clubsResponse] = await Promise.all([
+      const [profileResponse, eventsResponse, clubsResponse, myClubsResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -88,9 +97,12 @@ export default function UserDashboardPage() {
         fetch(`${API_BASE_URL}/clubs/my-managed-clubs`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
-      if ([profileResponse, eventsResponse, clubsResponse].some((response) => response.status === 401)) {
+      if ([profileResponse, eventsResponse, clubsResponse, myClubsResponse].some((response) => response.status === 401)) {
         handleUnauthorized();
         return;
       }
@@ -99,6 +111,7 @@ export default function UserDashboardPage() {
         const profile = await profileResponse.json();
         setFirstName(profile.first_name || '');
         setLastName(profile.last_name || '');
+        setRole(profile.role_name || '');
       }
 
       if (eventsResponse.ok) {
@@ -117,6 +130,12 @@ export default function UserDashboardPage() {
         }));
       } else {
         setManagedClubs([]);
+      }
+
+      if (myClubsResponse.ok) {
+        setMyClubs((await myClubsResponse.json()) as MyClub[]);
+      } else {
+        setMyClubs([]);
       }
     } catch {
       setEventMessage('Unable to load dashboard data right now.');
@@ -246,11 +265,54 @@ export default function UserDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {firstName || 'there'}!</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Here&apos;s what&apos;s happening with your clubs and account</p>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-gray-600 dark:text-gray-400">Here&apos;s what&apos;s happening with your clubs and account</p>
+            {role && <RoleBadge role={role} size="md" />}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            {/* Your Clubs membership list */}
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Memberships</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your clubs</h2>
+                </div>
+                <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {myClubs.length} {myClubs.length === 1 ? 'club' : 'clubs'}
+                </span>
+              </div>
+
+              {isLoadingEvents ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">Loading clubs...</p>
+              ) : myClubs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {myClubs.map((club) => (
+                    <Link
+                      key={club.club_id}
+                      href={`/clubs/${club.club_id}`}
+                      className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 hover:border-red-300 dark:hover:border-red-700 hover:shadow-sm transition-all group"
+                    >
+                      <span className="font-medium text-gray-900 dark:text-white group-hover:text-red-600 transition-colors">
+                        {club.club_name}
+                      </span>
+                      <RoleBadge role={club.role} />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">You haven&apos;t joined any clubs yet.</p>
+                  <Link href="/clubs" className="mt-3 inline-block text-sm font-semibold text-red-600 hover:text-red-700">
+                    Browse clubs &rarr;
+                  </Link>
+                </div>
+              )}
+            </section>
+
+            {/* Club events */}
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
@@ -307,6 +369,7 @@ export default function UserDashboardPage() {
               </Link>
             </section>
 
+            {(role === 'Club Representative' || role === 'Administrator') && (
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-6">
                 <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Create</p>
@@ -427,6 +490,7 @@ export default function UserDashboardPage() {
                 </div>
               )}
             </section>
+            )}
           </div>
 
           <div>
@@ -434,26 +498,41 @@ export default function UserDashboardPage() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Settings</h2>
 
               <div className="space-y-6">
-                <Link
-                  href="/userclubs"
-                  className="block w-full rounded-lg bg-red-600 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-red-700"
-                >
-                  Manage Clubs
-                </Link>
+                {(role === 'Club Representative' || role === 'Administrator') && (
+                  <Link
+                    href="/userclubs"
+                    className="block w-full rounded-lg bg-red-600 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-red-700"
+                  >
+                    Manage Clubs
+                  </Link>
+                )}
 
-                <Link
-                  href="/manage-events"
-                  className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  Manage Events
-                </Link>
+                {role === 'Administrator' && (
+                  <Link
+                    href="/admin-dashboard"
+                    className="block w-full rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-gray-800 dark:hover:bg-gray-600"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
 
-                <Link
-                  href="/manage-announcements"
-                  className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  Announcements
-                </Link>
+                {(role === 'Club Representative' || role === 'Administrator') && (
+                  <Link
+                    href="/manage-events"
+                    className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Manage Events
+                  </Link>
+                )}
+
+                {(role === 'Club Representative' || role === 'Administrator') && (
+                  <Link
+                    href="/manage-announcements"
+                    className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Announcements
+                  </Link>
+                )}
 
                 <div className="flex items-center justify-between">
                   <div>
