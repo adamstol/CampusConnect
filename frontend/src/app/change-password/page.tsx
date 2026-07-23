@@ -11,6 +11,7 @@ interface PasswordFormData {
   confirmPassword: string;
 }
 
+
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function ChangePasswordPage() {
