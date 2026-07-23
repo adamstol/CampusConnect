@@ -164,7 +164,14 @@ def get_club_members(club_id):
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
-    members = [{'user_id': membership.user_id, 'role': membership.role, 'joined_at': membership.joined_at.isoformat()} for membership in club.user_clubs]
+    members = [{
+        'user_id': membership.user_id,
+        'first_name': membership.user.first_name,
+        'last_name': membership.user.last_name,
+        'email': membership.user.email,
+        'role': membership.role,
+        'joined_at': membership.joined_at.isoformat()
+    } for membership in club.user_clubs]
     return jsonify(members), 200
 
 
