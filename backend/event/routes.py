@@ -98,6 +98,15 @@ def get_public_events():
     return jsonify([serialize_event(event) for event in events]), 200
 
 
+# Endpoint to get all events the current user is registered for.
+@event_bp.route('/my-registrations', methods=['GET'])
+@jwt_required()
+def get_my_registrations():
+    current_user_id = int(get_jwt_identity())
+    registrations = UserEvent.query.filter_by(user_id=current_user_id).all()
+    return jsonify([{'event_id': r.event_id, 'status': r.status} for r in registrations]), 200
+
+
 # Public endpoint for events happening during the current Monday-Sunday week.
 @event_bp.route('/this-week', methods=['GET'])
 def get_events_this_week():

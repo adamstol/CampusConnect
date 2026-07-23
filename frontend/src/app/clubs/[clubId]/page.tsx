@@ -61,8 +61,10 @@ export default function ClubDetailPage() {
 
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<number>>(new Set());
+  const [rsvpSubmitting, setRsvpSubmitting] = useState<number | null>(null);
 
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]); 
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
 
   useEffect(() => {
@@ -110,6 +112,53 @@ export default function ClubDetailPage() {
       })
       .catch(() => {});
   }, [params.clubId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/events/my-registrations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { event_id: number }[]) => {
+        setRegisteredEventIds(new Set(data.map((r) => r.event_id)));
+      })
+      .catch(() => {});
+  }, [params.clubId]);
+
+  async function handleRsvpToggle(eventId: number) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push(`/login?redirect=/clubs/${params.clubId}`);
+      return;
+    }
+
+    setRsvpSubmitting(eventId);
+    const isRegistered = registeredEventIds.has(eventId);
+    const endpoint = isRegistered
+      ? `${API_BASE_URL}/events/${eventId}/cancel`
+      : `${API_BASE_URL}/events/${eventId}/register`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setRegisteredEventIds((prev) => {
+          const next = new Set(prev);
+          if (isRegistered) next.delete(eventId);
+          else next.add(eventId);
+          return next;
+        });
+      }
+    } catch {
+      // Leave state unchanged on network error.
+    } finally {
+      setRsvpSubmitting(null);
+    }
+  }
 
   async function handleJoinToggle() {
     const token = localStorage.getItem('access_token');
@@ -233,12 +282,30 @@ export default function ClubDetailPage() {
           ) : events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {events.map((event) => (
-                <EventCard
-                  key={event.event_id}
-                  title={event.event_name}
-                  location={event.location || 'York University'}
-                  date={formatEventDate(event.event_date)}
-                />
+                <div key={event.event_id} className="relative">
+                  <EventCard
+                    title={event.event_name}
+                    location={event.location || 'York University'}
+                    date={formatEventDate(event.event_date)}
+                  />
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => handleRsvpToggle(event.event_id)}
+                      disabled={rsvpSubmitting === event.event_id}
+                      className={
+                        registeredEventIds.has(event.event_id)
+                          ? 'w-full rounded-full border border-red-600 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                          : 'w-full rounded-full bg-red-600 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50'
+                      }
+                    >
+                      {rsvpSubmitting === event.event_id
+                        ? '...'
+                        : registeredEventIds.has(event.event_id)
+                        ? 'Cancel RSVP'
+                        : 'RSVP'}
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (

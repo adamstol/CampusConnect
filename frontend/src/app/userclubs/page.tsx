@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import RoleBadge from '@/components/RoleBadge';
 
 interface ClubMembership {
   club_id: number;
@@ -31,6 +32,7 @@ interface LoadClubsOptions {
 export default function UserClubsPage() {
   const router = useRouter();
   const [clubs, setClubs] = useState<ClubMembership[]>([]);
+  const [role, setRole] = useState('');
   const [formData, setFormData] = useState<ClubFormData>({
     clubName: '',
     description: '',
@@ -43,20 +45,28 @@ export default function UserClubsPage() {
     if (!options.isInitialLoad) setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/clubs/my-clubs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const [clubsRes, profileRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (response.status === 401) {
+      if (clubsRes.status === 401) {
         localStorage.removeItem('access_token');
         router.push('/login');
         return;
       }
 
-      const data = await response.json();
-      setClubs(response.ok ? data : []);
+      const data = await clubsRes.json();
+      setClubs(clubsRes.ok ? data : []);
+
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        setRole(profile.role_name || '');
+      }
     } catch {
       setMessage('Unable to load your clubs right now.');
     } finally {
@@ -150,7 +160,8 @@ export default function UserClubsPage() {
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8">
-        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
+        {role === 'Club Representative' || role === 'Administrator' ? (
+          <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
           <div className="mb-6">
             <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">UserClubs</p>
             <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Create a club</h1>
@@ -205,8 +216,9 @@ export default function UserClubsPage() {
             </button>
           </form>
         </section>
+        ) : null}
 
-        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
+        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md lg:col-span-1">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Memberships</p>
@@ -231,7 +243,7 @@ export default function UserClubsPage() {
                       </p>
                     </div>
                     <span className="rounded-full bg-red-50 dark:bg-red-900/30 px-3 py-1 text-xs font-bold uppercase text-red-700 dark:text-red-400">
-                      {club.role}
+                      <RoleBadge role={club.role} />
                     </span>
                   </div>
                 </article>
