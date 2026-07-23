@@ -4,6 +4,7 @@ from club.club import Club
 from userclub.userclub import UserClub
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
+from auth.user import User
 
 club_bp = Blueprint('club', __name__, url_prefix='/clubs')
 
@@ -39,22 +40,20 @@ def create_club():
     return jsonify({'message': 'Club created successfully', 'club_id': new_club.club_id}), 201
 
 
-# Endpoint to get all clubs. This endpoint is accessible to all authenticated users.
+# Endpoint to get all clubs. Public — no authentication required, for club discovery/browsing.
 @club_bp.route('/', methods=['GET'])
-@jwt_required()
 def get_clubs():
-    
+
     # Query all clubs and return their details in a JSON format.
-    clubs = Club.query.all()
+    clubs = Club.query.order_by(Club.club_name.asc()).all()
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
 
 
-# Endpoint to get a specific club by ID. This endpoint is accessible to all authenticated users.
+# Endpoint to get a specific club by ID. Public — no authentication required, for club discovery/browsing.
 @club_bp.route('/<int:club_id>', methods=['GET'])
-@jwt_required()
 def get_club(club_id):
-    
+
     # Query the club by ID and return its details in a JSON format. 
     club = db.session.get(Club, club_id)
     if not club:
@@ -92,24 +91,27 @@ def update_club(club_id):
 
 
 # Endpoint to delete a club. This endpoint is accessible only to the club's Admin or Club Representative.
+
 @club_bp.route('/<int:club_id>', methods=['DELETE'])
 @jwt_required()
 def delete_club(club_id):
-    
-    # Get the JWT identity and query the club by ID. 
     current_user_id = int(get_jwt_identity())
     club = db.session.get(Club, club_id)
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
     user_club = UserClub.query.filter_by(user_id=current_user_id, club_id=club_id).first()
-    if not user_club or user_club.role not in ['admin', 'representative']:
+    is_owner = user_club is not None and user_club.role in ['admin', 'representative']
+
+    requesting_user = db.session.get(User, current_user_id)
+    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'Administrator'
+
+    if not (is_owner or is_platform_admin):
         return jsonify({'message': 'Unauthorized: Only admins and representatives can perform this action'}), 403
 
     db.session.delete(club)
     db.session.commit()
     return jsonify({'message': 'Club deleted successfully'}), 200
-
 
 # Endpoint to join a club. This endpoint is accessible to all authenticated users.
 @club_bp.route('/<int:club_id>/join', methods=['POST'])
