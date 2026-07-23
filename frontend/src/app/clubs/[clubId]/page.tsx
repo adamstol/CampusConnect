@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import EventCard from '@/components/EventCard';
+import ConfirmModal from '@/components/ConfirmModal';
 import { API_BASE_URL } from '@/lib/api';
 
 interface Club {
@@ -55,6 +56,8 @@ export default function ClubDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [joined, setJoined] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
@@ -115,15 +118,43 @@ export default function ClubDetailPage() {
       return;
     }
 
+    if (joined) {
+      setLeaveModalOpen(true);
+      return;
+    }
+
+    setJoinModalOpen(true);
+  }
+
+  async function executeJoinClub() {
+    setJoinModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/${joined ? 'leave' : 'join'}`, {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/join`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) {
-        setJoined((prev) => !prev);
-      }
+      if (response.ok) setJoined(true);
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function executeLeaveClub() {
+    setLeaveModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setJoined(false);
     } catch {
       // Network error — leave the button in its current state.
     } finally {
@@ -239,6 +270,22 @@ export default function ClubDetailPage() {
           )}
         </section>
       </main>
+      <ConfirmModal
+        isOpen={leaveModalOpen}
+        title="Leave Club"
+        message={`Are you sure you want to leave ${club.club_name}? You can rejoin at any time.`}
+        confirmLabel="Leave Club"
+        onConfirm={executeLeaveClub}
+        onCancel={() => setLeaveModalOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={joinModalOpen}
+        title="Join Club"
+        message={`Join ${club.club_name}? You'll receive announcements and can RSVP to events.`}
+        confirmLabel="Join Club"
+        onConfirm={executeJoinClub}
+        onCancel={() => setJoinModalOpen(false)}
+      />
     </div>
   );
 }

@@ -92,11 +92,14 @@ def seed():
         db.session.add_all([
             UserClub(user_id=alice.user_id, club_id=chess_club.club_id, role='admin'),
             UserClub(user_id=bob.user_id, club_id=chess_club.club_id, role='member'),
+            UserClub(user_id=charlie.user_id, club_id=chess_club.club_id, role='member'),
             UserClub(user_id=bob.user_id, club_id=coding_club.club_id, role='admin'),
             UserClub(user_id=alice.user_id, club_id=coding_club.club_id, role='member'),
+            UserClub(user_id=charlie.user_id, club_id=coding_club.club_id, role='member'),
             UserClub(user_id=bob.user_id, club_id=photography_club.club_id, role='member'),
             UserClub(user_id=dana.user_id, club_id=photography_club.club_id, role='admin'),
             UserClub(user_id=dana.user_id, club_id=hiking_club.club_id, role='admin'),
+            UserClub(user_id=charlie.user_id, club_id=hiking_club.club_id, role='member'),
         ])
         db.session.commit()
 
@@ -128,9 +131,15 @@ def seed():
         db.session.commit()
 
         db.session.add_all([
+            # Chess Night: alice + bob attending; charlie is a member but not registered (add dropdown)
+            UserEvent(user_id=alice.user_id, event_id=chess_event.event_id, status='attending'),
             UserEvent(user_id=bob.user_id, event_id=chess_event.event_id, status='attending'),
+            # Hack Night: alice attending; bob (admin) + charlie are members but not registered
             UserEvent(user_id=alice.user_id, event_id=coding_event.event_id, status='attending'),
+            # Golden Hour: bob maybe; dana (admin) available to add
             UserEvent(user_id=bob.user_id, event_id=photography_event.event_id, status='maybe'),
+            # Trail Cleanup: dana attending; charlie available to add
+            UserEvent(user_id=dana.user_id, event_id=hiking_event.event_id, status='attending'),
         ])
 
         db.session.add_all([
@@ -154,7 +163,8 @@ def seed():
         db.session.commit()
 
         print('Database reset and reseeded:')
-        print(f'  Users: alice, bob, charlie (no clubs), dana, admin @example.com (password: {SEED_PASSWORD})')
+        print(f'  Users: alice, bob, charlie, dana, admin @example.com (password: {SEED_PASSWORD})')
+        print('  charlie: Chess Club member, Coding Club member, Hiking Club member')
         print('  Clubs: Chess Club, Coding Club, Photography Club, Hiking Club')
         print('  Events: 1 per club')
         print('  Announcements: 1 per club')
