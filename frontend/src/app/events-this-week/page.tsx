@@ -1,4 +1,5 @@
 import Header from '@/components/Header';
+import { API_BASE_URL } from '@/lib/api';
 
 interface WeeklyEvent {
   event_id: number;
@@ -9,7 +10,6 @@ interface WeeklyEvent {
   location: string | null;
 }
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
 
 function formatEventDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
