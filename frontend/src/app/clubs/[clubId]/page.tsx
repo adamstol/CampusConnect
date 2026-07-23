@@ -14,39 +14,38 @@ interface Club {
 }
 
 interface ClubEvent {
-  id: number;
-  title: string;
-  location: string;
-  date: string;
+  event_id: number;
+  event_name: string;
+  description: string | null;
+  event_date: string;
+  location: string | null;
 }
 
 interface Announcement {
-  id: number;
+  announcement_id: number;
   title: string;
-  date: string;
   body: string;
+  created_at: string;
 }
 
-const upcomingEvents: ClubEvent[] = [
-  { id: 1, title: 'General Meeting', location: 'Student Centre - Room 204', date: 'July 18, 2026' },
-  { id: 2, title: 'New Member Social', location: 'Vari Hall', date: 'July 25, 2026' },
-  { id: 3, title: 'Workshop Night', location: 'Bergeron Centre', date: 'August 1, 2026' },
-];
+function formatEventDate(date: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
 
-const announcements: Announcement[] = [
-  {
-    id: 1,
-    title: 'Welcome back for the summer term!',
-    date: 'July 5, 2026',
-    body: "We're kicking off summer term with a general meeting. Come say hi and find out what we have planned this season.",
-  },
-  {
-    id: 2,
-    title: 'Executive applications now open',
-    date: 'June 28, 2026',
-    body: 'Interested in joining the executive team? Applications are open until the end of the month, reach out for details.',
-  },
-];
+function formatAnnouncementDate(date: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(date));
+}
 
 export default function ClubDetailPage() {
   const params = useParams<{ clubId: string }>();
@@ -54,6 +53,12 @@ export default function ClubDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [joined, setJoined] = useState(false);
+
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
+
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/clubs/${params.clubId}`)
@@ -69,6 +74,22 @@ export default function ClubDetailPage() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false));
+  }, [params.clubId]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/events/club/${params.clubId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ClubEvent[]) => setEvents(data))
+      .catch(() => setEvents([]))
+      .finally(() => setIsEventsLoading(false));
+  }, [params.clubId]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/clubs/${params.clubId}/announcements`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Announcement[]) => setAnnouncements(data))
+      .catch(() => setAnnouncements([]))
+      .finally(() => setIsAnnouncementsLoading(false));
   }, [params.clubId]);
 
   if (isLoading) {
@@ -136,29 +157,46 @@ export default function ClubDetailPage() {
 
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Upcoming Events</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} title={event.title} location={event.location} date={event.date} />
-            ))}
-          </div>
+          {isEventsLoading ? (
+            <p className="text-gray-600 dark:text-gray-400">Loading events...</p>
+          ) : events.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events.map((event) => (
+                <EventCard
+                  key={event.event_id}
+                  title={event.event_name}
+                  location={event.location || 'York University'}
+                  date={formatEventDate(event.event_date)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">No upcoming events.</p>
+          )}
         </section>
 
         <section>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Announcements</h2>
-          <div className="space-y-4">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{announcement.title}</h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">{announcement.date}</span>
+          {isAnnouncementsLoading ? (
+            <p className="text-gray-600 dark:text-gray-400">Loading announcements...</p>
+          ) : announcements.length > 0 ? (
+            <div className="space-y-4">
+              {announcements.map((announcement) => (
+                <div
+                  key={announcement.announcement_id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{announcement.title}</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{formatAnnouncementDate(announcement.created_at)}</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">{announcement.body}</p>
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">{announcement.body}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">No announcements yet.</p>
+          )}
         </section>
       </main>
     </div>
