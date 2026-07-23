@@ -1,15 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import ClubCard from '@/components/ClubCard';
-import { clubs } from '@/data/clubs';
+import { API_BASE_URL } from '@/lib/api';
+
+interface Club {
+  club_id: number;
+  club_name: string;
+  description: string | null;
+}
 
 export default function ClubsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [joinedClubIds, setJoinedClubIds] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/clubs/`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: Club[]) => setClubs(data))
+      .catch(() => setError('Unable to load clubs right now. Please try again later.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { club_id: number }[]) => setJoinedClubIds(new Set(data.map((c) => c.club_id))))
+      .catch(() => {});
+  }, []);
 
   const filteredClubs = clubs.filter((club) =>
-    club.name.toLowerCase().includes(searchQuery.toLowerCase())
+    club.club_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -40,19 +70,26 @@ export default function ClubsPage() {
           </div>
         </div>
 
-        {filteredClubs.length > 0 ? (
+        {isLoading ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">Loading clubs...</p>
+        ) : error ? (
+          <p className="text-center text-red-600 dark:text-red-400">{error}</p>
+        ) : filteredClubs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredClubs.map((club) => (
               <ClubCard
-                key={club.id}
-                id={club.id}
-                name={club.name}
-                description={club.description}
-                category={club.category}
-                location={club.location}
+                key={club.club_id}
+                id={club.club_id}
+                name={club.club_name}
+                description={club.description || 'No description yet.'}
+                initialJoined={joinedClubIds.has(club.club_id)}
               />
             ))}
           </div>
+        ) : clubs.length === 0 ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">
+            No clubs available yet.
+          </p>
         ) : (
           <p className="text-center text-gray-600 dark:text-gray-400">
             No clubs found matching &quot;{searchQuery}&quot;.

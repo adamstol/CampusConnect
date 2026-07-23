@@ -40,22 +40,20 @@ def create_club():
     return jsonify({'message': 'Club created successfully', 'club_id': new_club.club_id}), 201
 
 
-# Endpoint to get all clubs. This endpoint is accessible to all authenticated users.
+# Endpoint to get all clubs. Public — no authentication required, for club discovery/browsing.
 @club_bp.route('/', methods=['GET'])
-@jwt_required()
 def get_clubs():
-    
+
     # Query all clubs and return their details in a JSON format.
-    clubs = Club.query.all()
+    clubs = Club.query.order_by(Club.club_name.asc()).all()
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
 
 
-# Endpoint to get a specific club by ID. This endpoint is accessible to all authenticated users.
+# Endpoint to get a specific club by ID. Public — no authentication required, for club discovery/browsing.
 @club_bp.route('/<int:club_id>', methods=['GET'])
-@jwt_required()
 def get_club(club_id):
-    
+
     # Query the club by ID and return its details in a JSON format. 
     club = db.session.get(Club, club_id)
     if not club:

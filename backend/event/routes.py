@@ -217,9 +217,8 @@ def delete_event(event_id):
 
 # Endpoint to get all events for a specific club. This endpoint is accessible to all authenticated users.
 @event_bp.route('/club/<int:club_id>', methods=['GET'])
-@jwt_required()
 def get_club_events(club_id):
-    
+
     # Query the club by ID and return a list of its events in a JSON format.
     club = db.session.get(Club, club_id)
     if not club:

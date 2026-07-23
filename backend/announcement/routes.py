@@ -50,9 +50,8 @@ def create_announcement(club_id):
     return jsonify({'message': 'Announcement created successfully', 'announcement_id': announcement.announcement_id}), 201
 
 
-# Endpoint to list all announcements for a club. Accessible to all authenticated users.
+# Endpoint to list all announcements for a club. Public — no authentication required, for club discovery/browsing.
 @announcement_bp.route('/clubs/<int:club_id>/announcements', methods=['GET'])
-@jwt_required()
 def get_club_announcements(club_id):
     club = db.session.get(Club, club_id)
     if not club:
