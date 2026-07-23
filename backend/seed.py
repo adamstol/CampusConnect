@@ -55,12 +55,12 @@ def seed():
 
         alice = User(
             first_name='Alice', last_name='Smith', email='alice@example.com',
-            password=hash_password(SEED_PASSWORD), role_name='Student',
+            password=hash_password(SEED_PASSWORD), role_name='Club Representative',
             is_email_verified=True, is_account_enabled=True,
         )
         bob = User(
             first_name='Bob', last_name='Jones', email='bob@example.com',
-            password=hash_password(SEED_PASSWORD), role_name='Student',
+            password=hash_password(SEED_PASSWORD), role_name='Club Representative',
             is_email_verified=True, is_account_enabled=True,
         )
         charlie = User(
@@ -70,7 +70,7 @@ def seed():
         )
         dana = User(
             first_name='Dana', last_name='Lopez', email='dana@example.com',
-            password=hash_password(SEED_PASSWORD), role_name='Student',
+            password=hash_password(SEED_PASSWORD), role_name='Club Representative',
             is_email_verified=True, is_account_enabled=True,
         )
         admin = User(
@@ -78,7 +78,7 @@ def seed():
             password=hash_password(SEED_PASSWORD), role_name='Administrator',
             is_email_verified=True, is_account_enabled=True,
         )
-        # charlie is intentionally left with no club memberships below.
+        # charlie is the pure student test account — no managed clubs.
         db.session.add_all([alice, bob, charlie, dana, admin])
         db.session.commit()
 
@@ -93,13 +93,17 @@ def seed():
             UserClub(user_id=alice.user_id, club_id=chess_club.club_id, role='admin'),
             UserClub(user_id=bob.user_id, club_id=chess_club.club_id, role='member'),
             UserClub(user_id=charlie.user_id, club_id=chess_club.club_id, role='member'),
+            UserClub(user_id=admin.user_id, club_id=chess_club.club_id, role='member'),
             UserClub(user_id=bob.user_id, club_id=coding_club.club_id, role='admin'),
             UserClub(user_id=alice.user_id, club_id=coding_club.club_id, role='member'),
             UserClub(user_id=charlie.user_id, club_id=coding_club.club_id, role='member'),
+            UserClub(user_id=admin.user_id, club_id=coding_club.club_id, role='admin'),
             UserClub(user_id=bob.user_id, club_id=photography_club.club_id, role='member'),
             UserClub(user_id=dana.user_id, club_id=photography_club.club_id, role='admin'),
+            UserClub(user_id=admin.user_id, club_id=photography_club.club_id, role='member'),
             UserClub(user_id=dana.user_id, club_id=hiking_club.club_id, role='admin'),
             UserClub(user_id=charlie.user_id, club_id=hiking_club.club_id, role='member'),
+            UserClub(user_id=admin.user_id, club_id=hiking_club.club_id, role='admin'),
         ])
         db.session.commit()
 
@@ -163,8 +167,14 @@ def seed():
         db.session.commit()
 
         print('Database reset and reseeded:')
-        print(f'  Users: alice, bob, charlie, dana, admin @example.com (password: {SEED_PASSWORD})')
-        print('  charlie: Chess Club member, Coding Club member, Hiking Club member')
+        print(f'  All passwords: {SEED_PASSWORD}')
+        print()
+        print('  charlie@example.com  — Student          (no managed clubs, pure student view)')
+        print('  alice@example.com    — Club Representative (Chess Club admin, Coding Club member)')
+        print('  bob@example.com      — Club Representative (Coding Club admin, Chess/Photo member)')
+        print('  dana@example.com     — Club Representative (Photography + Hiking Club admin)')
+        print('  admin@example.com    — Administrator     (Coding + Hiking admin, Chess + Photo member)')
+        print()
         print('  Clubs: Chess Club, Coding Club, Photography Club, Hiking Club')
         print('  Events: 1 per club')
         print('  Announcements: 1 per club')
