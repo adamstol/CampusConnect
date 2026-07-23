@@ -27,3 +27,28 @@ def clean_db(app):
         yield shared_db
         shared_db.session.remove()
         shared_db.drop_all()    # Cleans the slate after the test finishes
+
+@pytest.fixture
+def auth_headers(client, app):
+    """Returns headers containing a valid JWT/Auth token for a regular user."""
+    # Adjust payload/endpoint based on your auth implementation
+    response = client.post('/auth/login', json={
+        "email": "user@example.com",
+        "password": "Password123!"
+    })
+    token = response.get_json().get("access_token")
+    return {"Authorization": f"Bearer {token}"}
+
+# tests/conftest.py
+import pytest
+
+@pytest.fixture
+def admin_headers(client):
+    """Returns headers with a valid JWT/Auth token for an admin user."""
+    # Adjust payload to match your auth route
+    response = client.post('/auth/login', json={
+        "email": "admin@example.com",
+        "password": "AdminPassword123!"
+    })
+    token = response.get_json().get("access_token")
+    return {"Authorization": f"Bearer {token}"}
