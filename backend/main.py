@@ -15,6 +15,7 @@ from userclub.userclub import UserClub
 from event.event import Event
 from userevent.userevent import UserEvent
 from announcement.announcement import Announcement
+from admin.routes import admin_bp
 
 load_dotenv()
 
@@ -47,6 +48,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
+app.register_blueprint(admin_bp)
 
 # Drop all tables and recreate from scratch on every startup
 with app.app_context():
