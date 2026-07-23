@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import RoleBadge from '@/components/RoleBadge';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface ClubMembership {
   club_id: number;
@@ -40,6 +41,7 @@ export default function UserClubsPage() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leavingClub, setLeavingClub] = useState<ClubMembership | null>(null);
 
   const loadClubs = useCallback(async (token: string, options: LoadClubsOptions = {}) => {
     if (!options.isInitialLoad) setIsLoading(true);
@@ -90,6 +92,30 @@ export default function UserClubsPage() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  }
+
+  async function handleLeaveClub() {
+    if (!leavingClub) return;
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/clubs/${leavingClub.club_id}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setClubs((prev) => prev.filter((c) => c.club_id !== leavingClub.club_id));
+        setMessage(`Left ${leavingClub.club_name}.`);
+      } else {
+        const data = await res.json();
+        setMessage(data.message || 'Unable to leave club.');
+      }
+    } catch {
+      setMessage('Unable to leave club right now.');
+    } finally {
+      setLeavingClub(null);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -242,9 +268,15 @@ export default function UserClubsPage() {
                         Joined {new Date(club.joined_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="rounded-full bg-red-50 dark:bg-red-900/30 px-3 py-1 text-xs font-bold uppercase text-red-700 dark:text-red-400">
-                      <RoleBadge role={club.role} />
-                    </span>
+                    <RoleBadge role={club.role} />
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => setLeavingClub(club)}
+                      className="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 transition-colors"
+                    >
+                      Leave
+                    </button>
                   </div>
                 </article>
               ))}
@@ -257,6 +289,15 @@ export default function UserClubsPage() {
           )}
         </section>
       </main>
+
+      <ConfirmModal
+        isOpen={leavingClub !== null}
+        title="Leave Club"
+        message={leavingClub ? `Are you sure you want to leave ${leavingClub.club_name}? You can rejoin at any time.` : ''}
+        confirmLabel="Leave Club"
+        onConfirm={handleLeaveClub}
+        onCancel={() => setLeavingClub(null)}
+      />
     </div>
   );
 }
