@@ -4,13 +4,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { API_BASE_URL } from '@/lib/api';
 
 interface PasswordFormData {
   password: string;
   confirmPassword: string;
 }
 
-const API_BASE_URL = 'http://localhost:5000';
+
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function ChangePasswordPage() {
