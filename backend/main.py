@@ -16,6 +16,7 @@ from userclub.userclub import UserClub
 from event.event import Event
 from userevent.userevent import UserEvent
 from announcement.announcement import Announcement
+from admin.routes import admin_bp
 
 load_dotenv()
 
@@ -49,6 +50,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
+app.register_blueprint(admin_bp)
 
 # NOTE: Schema changes are now handled by Flask-Migrate (`flask db upgrade`),
 # run as a pre-deploy step on Render. db.create_all() is left here only as a
