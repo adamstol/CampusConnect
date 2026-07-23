@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ClubMembership {
   club_id: number;
@@ -25,7 +26,7 @@ interface LoadClubsOptions {
   isInitialLoad?: boolean;
 }
 
-const API_BASE_URL = 'http://localhost:5000';
+
 
 export default function UserClubsPage() {
   const router = useRouter();
