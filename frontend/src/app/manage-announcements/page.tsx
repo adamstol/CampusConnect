@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface ManagedClub {
   club_id: number;
@@ -55,6 +56,12 @@ export default function ManageAnnouncementsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [hasError, setHasError] = useState(false);
+  const [modal, setModal] = useState<{
+    isOpen: boolean; title: string; message: string; onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const openModal = (title: string, message: string, onConfirm: () => void) =>
+    setModal({ isOpen: true, title, message, onConfirm });
+  const closeModal = () => setModal((m) => ({ ...m, isOpen: false }));
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -210,6 +217,21 @@ export default function ManageAnnouncementsPage() {
       return;
     }
 
+    openModal(
+      'Save Changes',
+      'Are you sure you want to save changes to this announcement?',
+      () => executeUpdate(),
+    );
+  }
+
+  async function executeUpdate() {
+    closeModal();
+    const token = localStorage.getItem('access_token');
+    if (!token || editingId === null) return;
+
+    const title = editForm.title.trim();
+    const body = editForm.body.trim();
+
     setIsSubmitting(true);
 
     try {
@@ -245,11 +267,18 @@ export default function ManageAnnouncementsPage() {
     }
   }
 
-  async function handleDelete(announcementId: number) {
+  function handleDelete(announcementId: number) {
+    openModal(
+      'Delete Announcement',
+      'Are you sure you want to delete this announcement? This cannot be undone.',
+      () => executeDelete(announcementId),
+    );
+  }
+
+  async function executeDelete(announcementId: number) {
+    closeModal();
     const token = localStorage.getItem('access_token');
     if (!token) return;
-
-    if (!window.confirm('Delete this announcement? This cannot be undone.')) return;
 
     setIsSubmitting(true);
 
@@ -508,6 +537,14 @@ export default function ManageAnnouncementsPage() {
           </div>
         )}
       </main>
+      <ConfirmModal
+        isOpen={modal.isOpen}
+        title={modal.title}
+        message={modal.message}
+        confirmLabel={modal.title === 'Save Changes' ? 'Save' : 'Delete'}
+        onConfirm={modal.onConfirm}
+        onCancel={closeModal}
+      />
     </div>
   );
 }

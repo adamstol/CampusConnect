@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import RoleBadge from '@/components/RoleBadge';
 
 interface ClubMembership {
   club_id: number;
@@ -35,6 +36,7 @@ const EMPTY_EDIT_FORM: ClubFormData = { clubName: '', description: '' };
 export default function UserClubsPage() {
   const router = useRouter();
   const [clubs, setClubs] = useState<ClubMembership[]>([]);
+  const [role, setRole] = useState('');
   const [formData, setFormData] = useState<ClubFormData>({
     clubName: '',
     description: '',
@@ -51,20 +53,28 @@ export default function UserClubsPage() {
     if (!options.isInitialLoad) setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/clubs/my-clubs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const [clubsRes, profileRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (response.status === 401) {
+      if (clubsRes.status === 401) {
         localStorage.removeItem('access_token');
         router.push('/login');
         return;
       }
 
-      const data = await response.json();
-      setClubs(response.ok ? data : []);
+      const data = await clubsRes.json();
+      setClubs(clubsRes.ok ? data : []);
+
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        setRole(profile.role_name || '');
+      }
     } catch {
       notify('Unable to load your clubs right now.', true);
     } finally {
@@ -366,8 +376,9 @@ export default function UserClubsPage() {
             </button>
           </form>
         </section>
+        ) : null}
 
-        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md">
+        <section className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md lg:col-span-1">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Memberships</p>

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import EventCard from '@/components/EventCard';
+import ConfirmModal from '@/components/ConfirmModal';
 import { API_BASE_URL } from '@/lib/api';
 
 interface Club {
@@ -55,11 +56,15 @@ export default function ClubDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [joined, setJoined] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<number>>(new Set());
+  const [rsvpSubmitting, setRsvpSubmitting] = useState<number | null>(null);
 
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]); 
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
 
   useEffect(() => {
@@ -108,6 +113,53 @@ export default function ClubDetailPage() {
       .catch(() => {});
   }, [params.clubId]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/events/my-registrations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { event_id: number }[]) => {
+        setRegisteredEventIds(new Set(data.map((r) => r.event_id)));
+      })
+      .catch(() => {});
+  }, [params.clubId]);
+
+  async function handleRsvpToggle(eventId: number) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push(`/login?redirect=/clubs/${params.clubId}`);
+      return;
+    }
+
+    setRsvpSubmitting(eventId);
+    const isRegistered = registeredEventIds.has(eventId);
+    const endpoint = isRegistered
+      ? `${API_BASE_URL}/events/${eventId}/cancel`
+      : `${API_BASE_URL}/events/${eventId}/register`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setRegisteredEventIds((prev) => {
+          const next = new Set(prev);
+          if (isRegistered) next.delete(eventId);
+          else next.add(eventId);
+          return next;
+        });
+      }
+    } catch {
+      // Leave state unchanged on network error.
+    } finally {
+      setRsvpSubmitting(null);
+    }
+  }
+
   async function handleJoinToggle() {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -115,15 +167,43 @@ export default function ClubDetailPage() {
       return;
     }
 
+    if (joined) {
+      setLeaveModalOpen(true);
+      return;
+    }
+
+    setJoinModalOpen(true);
+  }
+
+  async function executeJoinClub() {
+    setJoinModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/${joined ? 'leave' : 'join'}`, {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/join`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) {
-        setJoined((prev) => !prev);
-      }
+      if (response.ok) setJoined(true);
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function executeLeaveClub() {
+    setLeaveModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setJoined(false);
     } catch {
       // Network error — leave the button in its current state.
     } finally {
@@ -202,12 +282,30 @@ export default function ClubDetailPage() {
           ) : events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {events.map((event) => (
-                <EventCard
-                  key={event.event_id}
-                  title={event.event_name}
-                  location={event.location || 'York University'}
-                  date={formatEventDate(event.event_date)}
-                />
+                <div key={event.event_id} className="relative">
+                  <EventCard
+                    title={event.event_name}
+                    location={event.location || 'York University'}
+                    date={formatEventDate(event.event_date)}
+                  />
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => handleRsvpToggle(event.event_id)}
+                      disabled={rsvpSubmitting === event.event_id}
+                      className={
+                        registeredEventIds.has(event.event_id)
+                          ? 'w-full rounded-full border border-red-600 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                          : 'w-full rounded-full bg-red-600 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50'
+                      }
+                    >
+                      {rsvpSubmitting === event.event_id
+                        ? '...'
+                        : registeredEventIds.has(event.event_id)
+                        ? 'Cancel RSVP'
+                        : 'RSVP'}
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -239,6 +337,22 @@ export default function ClubDetailPage() {
           )}
         </section>
       </main>
+      <ConfirmModal
+        isOpen={leaveModalOpen}
+        title="Leave Club"
+        message={`Are you sure you want to leave ${club.club_name}? You can rejoin at any time.`}
+        confirmLabel="Leave Club"
+        onConfirm={executeLeaveClub}
+        onCancel={() => setLeaveModalOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={joinModalOpen}
+        title="Join Club"
+        message={`Join ${club.club_name}? You'll receive announcements and can RSVP to events.`}
+        confirmLabel="Join Club"
+        onConfirm={executeJoinClub}
+        onCancel={() => setJoinModalOpen(false)}
+      />
     </div>
   );
 }

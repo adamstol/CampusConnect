@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface ManagedClub {
   club_id: number;
@@ -25,6 +26,23 @@ interface EventFormData {
   description: string;
   eventDate: string;
   location: string;
+}
+
+interface Attendee {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  status: string;
+  registered_at: string;
+}
+
+interface ClubMember {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
 }
 
 const EMPTY_FORM: EventFormData = { eventName: '', description: '', eventDate: '', location: '' };
@@ -62,6 +80,20 @@ export default function ManageEventsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [hasError, setHasError] = useState(false);
+
+  const [expandedAttendeesId, setExpandedAttendeesId] = useState<number | null>(null);
+  const [attendeesByEvent, setAttendeesByEvent] = useState<Record<number, Attendee[]>>({});
+  const [loadingAttendeesId, setLoadingAttendeesId] = useState<number | null>(null);
+  const [clubMembers, setClubMembers] = useState<ClubMember[]>([]);
+  const [addUserId, setAddUserId] = useState('');
+  const [isAddingAttendee, setIsAddingAttendee] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState<number | null>(null);
+  const [modal, setModal] = useState<{
+    isOpen: boolean; title: string; message: string; onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const openModal = (title: string, message: string, onConfirm: () => void) =>
+    setModal({ isOpen: true, title, message, onConfirm });
+  const closeModal = () => setModal((m) => ({ ...m, isOpen: false }));
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -131,6 +163,22 @@ export default function ManageEventsPage() {
     }
   }, [handleUnauthorized]);
 
+  const loadClubMembers = useCallback(async (clubId: string) => {
+    const token = localStorage.getItem('access_token');
+    if (!token || !clubId) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/members`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { handleUnauthorized(); return; }
+      if (!res.ok) return;
+      const data = await res.json() as ClubMember[];
+      setClubMembers(data);
+    } catch {
+      notify('Unable to load club members right now.', true);
+    }
+  }, [handleUnauthorized]);
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -142,8 +190,14 @@ export default function ManageEventsPage() {
 
   useEffect(() => {
     if (!selectedClubId) return;
-    Promise.resolve().then(() => loadEvents(selectedClubId));
-  }, [selectedClubId, loadEvents]);
+    Promise.resolve().then(() => {
+      setExpandedAttendeesId(null);
+      setAttendeesByEvent({});
+      setAddUserId('');
+      loadEvents(selectedClubId);
+      loadClubMembers(selectedClubId);
+    });
+  }, [selectedClubId, loadEvents, loadClubMembers]);
 
   function startEditing(event: ClubEvent) {
     setEditingId(event.event_id);
@@ -171,6 +225,20 @@ export default function ManageEventsPage() {
       notify('Event name and date are required.', true);
       return;
     }
+
+    openModal(
+      'Save Changes',
+      'Are you sure you want to save changes to this event?',
+      () => executeUpdate(),
+    );
+  }
+
+  async function executeUpdate() {
+    closeModal();
+    const token = localStorage.getItem('access_token');
+    if (!token || editingId === null) return;
+
+    const eventName = editForm.eventName.trim();
 
     setIsSubmitting(true);
 
@@ -212,11 +280,18 @@ export default function ManageEventsPage() {
     }
   }
 
-  async function handleDelete(eventId: number) {
+  function handleDelete(eventId: number) {
+    openModal(
+      'Delete Event',
+      'Are you sure you want to delete this event? This cannot be undone.',
+      () => executeDelete(eventId),
+    );
+  }
+
+  async function executeDelete(eventId: number) {
+    closeModal();
     const token = localStorage.getItem('access_token');
     if (!token) return;
-
-    if (!window.confirm('Delete this event? This cannot be undone.')) return;
 
     setIsSubmitting(true);
 
@@ -245,6 +320,105 @@ export default function ManageEventsPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function loadAttendees(eventId: number) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setLoadingAttendeesId(eventId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/attendees`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { handleUnauthorized(); return; }
+      if (!res.ok) return;
+      const data = await res.json() as Attendee[];
+      setAttendeesByEvent((prev) => ({ ...prev, [eventId]: data }));
+    } catch {
+      // non-critical — silently ignore
+    } finally {
+      setLoadingAttendeesId(null);
+    }
+  }
+
+  async function toggleAttendees(eventId: number) {
+    if (expandedAttendeesId === eventId) {
+      setExpandedAttendeesId(null);
+      return;
+    }
+    setExpandedAttendeesId(eventId);
+    setAddUserId('');
+    if (!attendeesByEvent[eventId]) {
+      await loadAttendees(eventId);
+    }
+  }
+
+  function confirmAddAttendee(eventId: number, name: string) {
+    if (!addUserId) return;
+    openModal(
+      'Add Attendee',
+      `Add ${name} to this event?`,
+      () => executeAddAttendee(eventId),
+    );
+  }
+
+  async function executeAddAttendee(eventId: number) {
+    closeModal();
+    const token = localStorage.getItem('access_token');
+    if (!token || !addUserId) return;
+    setIsAddingAttendee(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/attendees/${addUserId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.status === 401) { handleUnauthorized(); return; }
+      if (!res.ok) {
+        notify(data.message || 'Unable to add attendee.', true);
+        return;
+      }
+      setAddUserId('');
+      await loadAttendees(eventId);
+    } catch {
+      notify('Unable to add attendee right now.', true);
+    } finally {
+      setIsAddingAttendee(false);
+    }
+  }
+
+  async function handleRemoveAttendee(eventId: number, userId: number) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setRemovingUserId(userId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/attendees/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.status === 401) { handleUnauthorized(); return; }
+      if (!res.ok) {
+        notify(data.message || 'Unable to remove attendee.', true);
+        return;
+      }
+      setAttendeesByEvent((prev) => ({
+        ...prev,
+        [eventId]: (prev[eventId] || []).filter((a) => a.user_id !== userId),
+      }));
+    } catch {
+      notify('Unable to remove attendee right now.', true);
+    } finally {
+      setRemovingUserId(null);
+    }
+  }
+
+  function confirmRemoveAttendee(eventId: number, userId: number, name: string) {
+    openModal(
+      'Remove Attendee',
+      `Remove ${name} from this event? They will need to re-register themselves.`,
+      () => handleRemoveAttendee(eventId, userId),
+    );
   }
 
   const inputClasses =
@@ -499,7 +673,85 @@ export default function ManageEventsPage() {
                             >
                               Delete
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleAttendees(event.event_id)}
+                              className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              {expandedAttendeesId === event.event_id ? 'Hide Attendees' : 'Attendees'}
+                            </button>
                           </div>
+
+                          {expandedAttendeesId === event.event_id && (
+                            <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                                Attendees
+                                {attendeesByEvent[event.event_id] && (
+                                  <span className="ml-2 rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">
+                                    {attendeesByEvent[event.event_id].length}
+                                  </span>
+                                )}
+                              </h4>
+
+                              {loadingAttendeesId === event.event_id ? (
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Loading attendees...</p>
+                              ) : (attendeesByEvent[event.event_id] ?? []).length === 0 ? (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">No attendees yet.</p>
+                              ) : (
+                                <ul className="space-y-2 mb-4">
+                                  {(attendeesByEvent[event.event_id] ?? []).map((attendee) => (
+                                    <li key={attendee.user_id} className="flex items-center justify-between text-sm">
+                                      <span className="text-gray-800 dark:text-gray-200">
+                                        {attendee.first_name} {attendee.last_name}
+                                        <span className="ml-2 text-gray-500 dark:text-gray-400 text-xs">({attendee.email})</span>
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => confirmRemoveAttendee(event.event_id, attendee.user_id, `${attendee.first_name} ${attendee.last_name}`)}
+                                        disabled={removingUserId === attendee.user_id}
+                                        className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:cursor-not-allowed disabled:text-gray-400"
+                                      >
+                                        {removingUserId === attendee.user_id ? 'Removing...' : 'Remove'}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+
+                              {clubMembers.filter(
+                                (m) => !(attendeesByEvent[event.event_id] ?? []).some((a) => a.user_id === m.user_id)
+                              ).length > 0 && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <select
+                                    value={addUserId}
+                                    onChange={(e) => setAddUserId(e.target.value)}
+                                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-white dark:bg-gray-700 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                                  >
+                                    <option value="">Select a member to add...</option>
+                                    {clubMembers
+                                      .filter((m) => !(attendeesByEvent[event.event_id] ?? []).some((a) => a.user_id === m.user_id))
+                                      .map((member) => (
+                                        <option key={member.user_id} value={member.user_id}>
+                                          {member.first_name} {member.last_name} ({member.email})
+                                        </option>
+                                      ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const member = clubMembers.find((m) => String(m.user_id) === addUserId);
+                                      const name = member ? `${member.first_name} ${member.last_name}` : 'this member';
+                                      confirmAddAttendee(event.event_id, name);
+                                    }}
+                                    disabled={!addUserId || isAddingAttendee}
+                                    className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                                  >
+                                    {isAddingAttendee ? 'Adding...' : 'Add'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                     </article>
@@ -510,6 +762,14 @@ export default function ManageEventsPage() {
           </div>
         )}
       </main>
+      <ConfirmModal
+        isOpen={modal.isOpen}
+        title={modal.title}
+        message={modal.message}
+        confirmLabel={modal.title === 'Save Changes' ? 'Save' : modal.title === 'Add Attendee' ? 'Add' : 'Delete'}
+        onConfirm={modal.onConfirm}
+        onCancel={closeModal}
+      />
     </div>
   );
 }
