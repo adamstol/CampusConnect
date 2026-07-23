@@ -4,14 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ProfileFormData {
   first_name: string;
   last_name: string;
   email: string;
 }
-
-const API_BASE_URL = 'http://localhost:5000';
 
 export default function EditProfilePage() {
   const router = useRouter();
