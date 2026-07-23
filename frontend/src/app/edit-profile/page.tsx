@@ -12,8 +12,6 @@ interface ProfileFormData {
   email: string;
 }
 
-
-
 export default function EditProfilePage() {
   const router = useRouter();
   const { resetTheme } = useTheme();
