@@ -29,7 +29,7 @@ def create_club():
     if existing_club:
         return jsonify({'message': 'Club name already exists'}), 400
 
-    new_club = Club(club_name=club_name, description=description)
+    new_club = Club(club_name=club_name, description=description, status='pending')
     db.session.add(new_club)
     db.session.commit()
 
@@ -37,32 +37,21 @@ def create_club():
     db.session.add(user_club)
     db.session.commit()
 
-    return jsonify({'message': 'Club created successfully', 'club_id': new_club.club_id}), 201
-
+    return jsonify({
+        'message': 'Club application submitted successfully, pending administrator approval',
+        'club_id': new_club.club_id,
+        'status': new_club.status
+    }), 201
 
 # Endpoint to get all clubs. This endpoint is accessible to all authenticated users.
 @club_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_clubs():
     
-    # Query all clubs and return their details in a JSON format.
-    clubs = Club.query.all()
+    # Only return clubs that have been approved by an administrator.
+    clubs = Club.query.filter_by(status='approved').all()
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
-
-
-# Endpoint to get a specific club by ID. This endpoint is accessible to all authenticated users.
-@club_bp.route('/<int:club_id>', methods=['GET'])
-@jwt_required()
-def get_club(club_id):
-    
-    # Query the club by ID and return its details in a JSON format. 
-    club = db.session.get(Club, club_id)
-    if not club:
-        return jsonify({'message': 'Club not found'}), 404
-
-    club_data = {'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description}
-    return jsonify(club_data), 200
 
 # Endpoint to update a club's information. This endpoint is accessible only to the club's Admin or Club Representative.
 @club_bp.route('/<int:club_id>', methods=['PATCH'])
@@ -106,7 +95,7 @@ def delete_club(club_id):
     is_owner = user_club is not None and user_club.role in ['admin', 'representative']
 
     requesting_user = db.session.get(User, current_user_id)
-    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'Administrator'
+    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'admin'
 
     if not (is_owner or is_platform_admin):
         return jsonify({'message': 'Unauthorized: Only admins and representatives can perform this action'}), 403
