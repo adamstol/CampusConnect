@@ -12,7 +12,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 def _is_platform_admin(user_id):
     """Return True if the user is a platform Administrator."""
     user = db.session.get(User, user_id)
-    return user is not None and user.role_name == 'admin'
+    return user is not None and user.role_name == 'Administrator'
 
 
 # Endpoint to lock or unlock a user account. Only platform Administrators may perform this action.
