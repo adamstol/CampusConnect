@@ -9,7 +9,7 @@ from auth.user import User
 from event.event import Event
 from userevent.userevent import UserEvent
 @pytest.mark.rtm("A-01")
-def test_admin_create_club_tc039(client, app):
+def test_admin_create_club_tc039(client, app,seed_admin_user):
     """
     TC-039 (A-01): Admin performs a rep-level action (create club) end-to-end
     Requirement: admin_id=1 creates a new club; Club is created successfully 
@@ -18,7 +18,7 @@ def test_admin_create_club_tc039(client, app):
     admin_id = 1
     # 1. Generate a valid JWT token for admin_id = 1
     with app.app_context():
-        access_token = create_access_token(identity=str(admin_id))
+        access_token = create_access_token(identity=str(seed_admin_user))
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
