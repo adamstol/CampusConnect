@@ -20,7 +20,8 @@ def serialize_event(event):
         'event_name': event.event_name,
         'description': event.description,
         'event_date': event.event_date.isoformat(),
-        'location': event.location
+        'location': event.location,
+        'status': event.status
     }
 
 
@@ -86,7 +87,7 @@ def create_event():
 def get_events():
     
     # Query all events and return their details in a JSON format.
-    events = Event.query.all()
+    events = Event.query.filter_by(status='approved').all()
     events_data = [serialize_event(event) for event in events]
     return jsonify(events_data), 200
 
@@ -94,7 +95,7 @@ def get_events():
 # Public endpoint for homepage event discovery.
 @event_bp.route('/public', methods=['GET'])
 def get_public_events():
-    events = Event.query.order_by(Event.event_date.asc()).all()
+    events = Event.query.filter_by(status='approved').order_by(Event.event_date.asc()).all()
     return jsonify([serialize_event(event) for event in events]), 200
 
 
@@ -112,14 +113,18 @@ def get_my_registrations():
 def get_events_this_week():
     today = datetime.now().date()
     week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=7)
+    week_end = week_start + timedelta(days=6)  # Sunday of this week
 
     start_datetime = datetime.combine(week_start, time.min)
-    end_datetime = datetime.combine(week_end, time.min)
+    end_datetime = datetime.combine(week_end, time.max)
 
     events = (
         Event.query
-        .filter(Event.event_date >= start_datetime, Event.event_date < end_datetime)
+        .filter(
+            Event.status == 'approved',
+            Event.event_date >= start_datetime,
+            Event.event_date <= end_datetime
+        )
         .order_by(Event.event_date.asc())
         .all()
     )
@@ -163,7 +168,8 @@ def get_event(event_id):
         'event_name': event.event_name,
         'description': event.description,
         'event_date': event.event_date.isoformat(),
-        'location': event.location
+        'location': event.location,
+        'status': event.status
     }
     return jsonify(event_data), 200
 
@@ -233,13 +239,14 @@ def get_club_events(club_id):
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
-    events = Event.query.filter_by(club_id=club_id).all()
+    events = Event.query.filter_by(club_id=club_id, status='approved').all()
     events_data = [{
         'event_id': event.event_id,
         'event_name': event.event_name,
         'description': event.description,
         'event_date': event.event_date.isoformat(),
-        'location': event.location
+        'location': event.location,
+        'status': event.status
     } for event in events]
     return jsonify(events_data), 200
 

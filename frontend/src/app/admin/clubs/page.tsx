@@ -20,7 +20,8 @@ interface ExistingClub {
   club_id: number;
   club_name: string;
   description: string;
-  // NOTE: no member count yet ΓÇö get_clubs() doesn't return it.
+  status: string;
+  member_count: number;
 }
 
 export default function ClubManagementPage() {
@@ -62,7 +63,7 @@ export default function ClubManagementPage() {
 
         const profile = await response.json();
 
-        if (profile.role_name !== 'admin') {
+        if (profile.role_name !== 'Administrator') {
           router.push('/user-dashboard');
           return;
         }
@@ -85,16 +86,16 @@ export default function ClubManagementPage() {
     }
 
     try {
-      const [pendingRes, approvedRes] = await Promise.all([
+      const [pendingRes, allClubsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/admin/clubs/pending`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/clubs/`, {
+        fetch(`${API_BASE_URL}/admin/clubs`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
 
-      if (pendingRes.status === 401 || approvedRes.status === 401) {
+      if (pendingRes.status === 401 || allClubsRes.status === 401) {
         handleUnauthorized();
         return;
       }
@@ -103,8 +104,8 @@ export default function ClubManagementPage() {
         setPendingApplications(await pendingRes.json());
       }
 
-      if (approvedRes.ok) {
-        setExistingClubs(await approvedRes.json());
+      if (allClubsRes.ok) {
+        setExistingClubs(await allClubsRes.json());
       }
     } catch {
       setActionError('Failed to load club data. Please refresh the page.');
@@ -353,7 +354,7 @@ export default function ClubManagementPage() {
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-5"
                 >
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                         {club.club_name}
                       </h3>
@@ -363,17 +364,30 @@ export default function ClubManagementPage() {
                       </p>
 
                       <p className="text-sm text-green-600 dark:text-green-400">
-                        Status: Active
+                        Status: {club.status === 'approved' ? 'Active' : club.status}
+                      </p>
+
+                      <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                        Members: {club.member_count}
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteClub(club.club_id)}
-                      disabled={pendingActionId === club.club_id}
-                      className="rounded-lg bg-red-600 px-5 py-2 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
-                    >
-                      Delete Club
-                    </button>
+                    <div className="flex gap-3">
+                      <Link
+                        href={`/admin/clubs/${club.club_id}`}
+                        className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 transition text-center"
+                      >
+                        View Members
+                      </Link>
+
+                      <button
+                        onClick={() => handleDeleteClub(club.club_id)}
+                        disabled={pendingActionId === club.club_id}
+                        className="rounded-lg bg-red-600 px-5 py-2 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
