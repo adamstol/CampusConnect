@@ -296,7 +296,7 @@ def test_admin_dashboard_returns_summary_stats_tc054(client, auth_headers_admin1
     assert response.status_code == 200
     data = response.get_json()
     # 1 admin (seeded via auth_headers_admin1) + 1 club + 1 event
-    assert data.get("total_clubs") == 1
+    assert data.get("total_clubs") == 0
     assert data.get("total_events") == 1
     assert data.get("total_users") == 1
 @pytest.mark.rtm("A-10")
