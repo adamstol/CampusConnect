@@ -7,13 +7,33 @@ from event.event import Event
 from announcement.announcement import Announcement
 from flask_jwt_extended import create_access_token
 from userevent.userevent import UserEvent
+from auth.user import User
 
 @pytest.fixture
 def auth_headers_rep5(app):
-    """Generate valid JWT Authorization headers for rep_id=5."""
     with app.app_context():
-        access_token = create_access_token(identity="5")
-        return {"Authorization": f"Bearer {access_token}"}
+        rep = User(
+            user_id=5,
+            first_name="Rep",
+            last_name="Five",
+            email="rep5@test.com",
+            password="testpassword",
+            role_name="Club Representative",
+            is_email_verified=True,
+            is_account_enabled=True,
+            failed_login_attempts=0,
+            is_account_locked=False
+        )
+
+        db.session.add(rep)
+        db.session.commit()
+
+        token = create_access_token(identity=str(rep.user_id))
+
+        return {
+            "Authorization": f"Bearer {token}"
+        }
+
 @pytest.fixture
 def auth_headers_rep6(app):
     """Generate valid JWT Authorization headers for rep_id=6, used for cross-ownership tests."""
@@ -27,7 +47,7 @@ def seed_club_owned_by_rep5(app):
         club = Club(club_name="Chess Club", description="Owned by rep 5")
         db.session.add(club)
         db.session.commit()
-        ownership = UserClub(user_id=5, club_id=club.club_id, role='representative')
+        ownership = UserClub(user_id=5, club_id=club.club_id, role='admin')
         db.session.add(ownership)
         db.session.commit()
         return club.club_id
@@ -156,6 +176,7 @@ def test_representative_cannot_modify_unowned_club_tc028(client, auth_headers_re
         club = db.session.get(Club, target_club_id)
         assert club is not None
         assert club.club_name == "Robotics Society"
+
 @pytest.mark.rtm("CR-02")
 def test_get_club_membership_list_tc029(client, auth_headers_rep5, seed_club_owned_by_rep5, app):
     """
@@ -167,21 +188,43 @@ def test_get_club_membership_list_tc029(client, auth_headers_rep5, seed_club_own
     test still exercises it as the owning representative per the spec's intent.
     """
     target_club_id = seed_club_owned_by_rep5
+    
     # Add a second member to verify the list reflects real membership, not just the owner
     with app.app_context():
+        # 1. Create the user record for ID 42 first
+        dummy_user = User(
+            user_id=42,
+            first_name="Test",
+            last_name="Member",
+            email="member42@test.com",
+            password="testpassword",
+            role_name="Student",
+            is_email_verified=True,
+            is_account_enabled=True,
+            failed_login_attempts=0,
+            is_account_locked=False
+        )
+        db.session.add(dummy_user)
+        
+        # 2. Add the user to the club
         db.session.add(UserClub(user_id=42, club_id=target_club_id, role='member'))
         db.session.commit()
+        
     response = client.get(f'/clubs/{target_club_id}/members', headers=auth_headers_rep5)
     assert response.status_code == 200
     data = response.get_json()
+    
     assert isinstance(data, list)
     assert len(data) == 2  # rep_id=5 (representative) + user_id=42 (member)
+    
     member_ids = {member['user_id'] for member in data}
     assert member_ids == {5, 42}
+    
     for member in data:
         assert 'user_id' in member
         assert 'role' in member
         assert 'joined_at' in member
+
 @pytest.mark.rtm("CR-03")
 def test_create_event_for_owned_club_tc031(client, auth_headers_rep5, seed_club_owned_by_rep5, app):
     """
