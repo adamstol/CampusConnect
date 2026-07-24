@@ -145,27 +145,28 @@ export default function StatisticsPage() {
   );
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token');
 
-    if (!token) {
-      router.push('/login');
-      return;
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+
+  const verifiedToken: string = token; // narrowed value, captured once
+
+  async function initializeDashboard() {
+    const isAdmin = await verifyAdmin(verifiedToken);
+
+    if (isAdmin) {
+      await loadDashboardStats(verifiedToken);
+      await loadSecurityLogs(verifiedToken);
     }
 
-    async function initializeDashboard() {
-      const isAdmin = await verifyAdmin(token);
+    setIsLoading(false);
+  }
 
-      if (isAdmin) {
-        await loadDashboardStats(token);
-        await loadSecurityLogs(token);
-      }
-
-      setIsLoading(false);
-    }
-
-    initializeDashboard();
-  }, [router, verifyAdmin, loadDashboardStats, loadSecurityLogs]);
-
+  initializeDashboard();
+}, [router, verifyAdmin, loadDashboardStats, loadSecurityLogs]); 
   const summaryStats = [
     {
       title: 'Registered Users',
