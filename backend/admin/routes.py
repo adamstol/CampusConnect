@@ -160,3 +160,57 @@ def get_all_users():
         })
 
     return jsonify(user_list), 200
+
+# Endpoint to list all pending club applications awaiting review. Only platform Administrators.
+@admin_bp.route('/clubs/pending', methods=['GET'])
+@jwt_required()
+def get_pending_clubs():
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can view pending applications'}), 403
+
+    pending_clubs = Club.query.filter_by(status='pending').all()
+    data = [{
+        'club_id': club.club_id,
+        'club_name': club.club_name,
+        'description': club.description,
+        'created_at': club.created_at.isoformat()
+    } for club in pending_clubs]
+    return jsonify(data), 200
+
+
+# Endpoint to approve a pending club application. Only platform Administrators.
+@admin_bp.route('/clubs/<int:club_id>/approve', methods=['PATCH'])
+@jwt_required()
+def approve_club(club_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can approve club applications'}), 403
+
+    club = db.session.get(Club, club_id)
+    if not club:
+        return jsonify({'message': 'Club not found'}), 404
+
+    club.status = 'approved'
+    db.session.commit()
+    return jsonify({'message': 'Club application approved', 'club_id': club.club_id, 'status': club.status}), 200
+
+
+# Endpoint to reject a pending club application. Only platform Administrators.
+@admin_bp.route('/clubs/<int:club_id>/reject', methods=['PATCH'])
+@jwt_required()
+def reject_club(club_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can reject club applications'}), 403
+
+    club = db.session.get(Club, club_id)
+    if not club:
+        return jsonify({'message': 'Club not found'}), 404
+
+    club.status = 'rejected'
+    db.session.commit()
+    return jsonify({'message': 'Club application rejected', 'club_id': club.club_id, 'status': club.status}), 200
+
+
+
