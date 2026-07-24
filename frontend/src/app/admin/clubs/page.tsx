@@ -8,17 +8,19 @@ import { useCallback, useEffect, useState } from 'react';
 const API_BASE_URL = 'http://localhost:5000';
 
 interface PendingClubApplication {
-  id: number;
-  name: string;
-  representative: string;
-  submitted: string;
+  club_id: number;
+  club_name: string;
+  description: string;
+  created_at: string;
+  // NOTE: no submitter/representative field yet ΓÇö get_pending_clubs() doesn't
+  // return it. Add a join on UserClub (role='admin') server-side if needed.
 }
 
 interface ExistingClub {
-  id: number;
-  name: string;
-  members: number;
-  status: string;
+  club_id: number;
+  club_name: string;
+  description: string;
+  // NOTE: no member count yet ΓÇö get_clubs() doesn't return it.
 }
 
 export default function ClubManagementPage() {
@@ -26,6 +28,12 @@ export default function ClubManagementPage() {
   const { resetTheme } = useTheme();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  const [pendingApplications, setPendingApplications] = useState<PendingClubApplication[]>([]);
+  const [existingClubs, setExistingClubs] = useState<ExistingClub[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<number | null>(null);
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -52,16 +60,14 @@ export default function ClubManagementPage() {
           return;
         }
 
-        /*
-         * Uncomment later once role checking is implemented.
-         *
-         * const profile = await response.json();
-         *
-         * if (profile.role_name !== 'Admin') {
-         *   router.push('/user-dashboard');
-         *   return;
-         * }
-         */
+        const profile = await response.json();
+
+        if (profile.role_name !== 'admin') {
+          router.push('/user-dashboard');
+          return;
+        }
+
+        setIsAuthorized(true);
       } catch {
         router.push('/user-dashboard');
       } finally {
@@ -70,6 +76,40 @@ export default function ClubManagementPage() {
     },
     [handleUnauthorized, router]
   );
+
+  const fetchClubData = useCallback(async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const [pendingRes, approvedRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/admin/clubs/pending`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/clubs/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (pendingRes.status === 401 || approvedRes.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (pendingRes.ok) {
+        setPendingApplications(await pendingRes.json());
+      }
+
+      if (approvedRes.ok) {
+        setExistingClubs(await approvedRes.json());
+      }
+    } catch {
+      setActionError('Failed to load club data. Please refresh the page.');
+    }
+  }, [handleUnauthorized, router]);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -82,47 +122,104 @@ export default function ClubManagementPage() {
     Promise.resolve().then(() => verifyAdmin(token));
   }, [router, verifyAdmin]);
 
-  const pendingApplications: PendingClubApplication[] = [
-    {
-      id: 1,
-      name: 'Photography Club',
-      representative: 'Alice Johnson',
-      submitted: 'July 20, 2026',
-    },
-    {
-      id: 2,
-      name: 'Chess Club',
-      representative: 'Bob Smith',
-      submitted: 'July 21, 2026',
-    },
-    {
-      id: 3,
-      name: 'Robotics Society',
-      representative: 'Charlie Brown',
-      submitted: 'July 22, 2026',
-    },
-  ];
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchClubData();
+    }
+  }, [isAuthorized, fetchClubData]);
 
-  const existingClubs: ExistingClub[] = [
-    {
-      id: 1,
-      name: 'Computer Science Club',
-      members: 142,
-      status: 'Active',
-    },
-    {
-      id: 2,
-      name: 'Anime Club',
-      members: 81,
-      status: 'Active',
-    },
-    {
-      id: 3,
-      name: 'Book Club',
-      members: 39,
-      status: 'Active',
-    },
-  ];
+  const handleApprove = async (clubId: number) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    setActionError(null);
+    setPendingActionId(clubId);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/clubs/${clubId}/approve`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!response.ok) {
+        setActionError('Failed to approve club application.');
+        return;
+      }
+
+      await fetchClubData();
+    } catch {
+      setActionError('Failed to approve club application.');
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  const handleReject = async (clubId: number) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    setActionError(null);
+    setPendingActionId(clubId);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/clubs/${clubId}/reject`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!response.ok) {
+        setActionError('Failed to reject club application.');
+        return;
+      }
+
+      await fetchClubData();
+    } catch {
+      setActionError('Failed to reject club application.');
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  const handleDeleteClub = async (clubId: number) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    setActionError(null);
+    setPendingActionId(clubId);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${clubId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!response.ok) {
+        setActionError('Failed to delete club.');
+        return;
+      }
+
+      await fetchClubData();
+    } catch {
+      setActionError('Failed to delete club.');
+    } finally {
+      setPendingActionId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -174,6 +271,12 @@ export default function ClubManagementPage() {
           </p>
         </div>
 
+        {actionError && (
+          <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-4 py-3 text-red-700 dark:text-red-300">
+            {actionError}
+          </div>
+        )}
+
         {/* Pending Applications */}
 
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
@@ -181,46 +284,54 @@ export default function ClubManagementPage() {
             Pending Club Applications
           </h2>
 
-          <div className="space-y-4">
-            {pendingApplications.map((club) => (
-              <div
-                key={club.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-5"
-              >
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {club.name}
-                    </h3>
+          {pendingApplications.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">
+              No pending applications.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {pendingApplications.map((club) => (
+                <div
+                  key={club.club_id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-5"
+                >
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {club.club_name}
+                      </h3>
 
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Representative: {club.representative}
-                    </p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {club.description}
+                      </p>
 
-                    <p className="text-sm text-gray-500 dark:text-gray-500">
-                      Submitted: {club.submitted}
-                    </p>
-                  </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-500">
+                        Submitted: {new Date(club.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
 
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => console.log('Approve', club.id)}
-                      className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 transition"
-                    >
-                      Approve
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleApprove(club.club_id)}
+                        disabled={pendingActionId === club.club_id}
+                        className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
 
-                    <button
-                      onClick={() => console.log('Reject', club.id)}
-                      className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 transition"
-                    >
-                      Reject
-                    </button>
+                      <button
+                        onClick={() => handleReject(club.club_id)}
+                        disabled={pendingActionId === club.club_id}
+                        className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Existing Clubs */}
@@ -230,39 +341,47 @@ export default function ClubManagementPage() {
             Existing Clubs
           </h2>
 
-          <div className="space-y-4">
-            {existingClubs.map((club) => (
-              <div
-                key={club.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-5"
-              >
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {club.name}
-                    </h3>
+          {existingClubs.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">
+              No approved clubs yet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {existingClubs.map((club) => (
+                <div
+                  key={club.club_id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-5"
+                >
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {club.club_name}
+                      </h3>
 
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Members: {club.members}
-                    </p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {club.description}
+                      </p>
 
-                    <p className="text-sm text-green-600 dark:text-green-400">
-                      Status: {club.status}
-                    </p>
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        Status: Active
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteClub(club.club_id)}
+                      disabled={pendingActionId === club.club_id}
+                      className="rounded-lg bg-red-600 px-5 py-2 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                    >
+                      Delete Club
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => console.log('Delete Club', club.id)}
-                    className="rounded-lg bg-red-600 px-5 py-2 font-semibold text-white hover:bg-red-700 transition"
-                  >
-                    Delete Club
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
   );
 }
+
