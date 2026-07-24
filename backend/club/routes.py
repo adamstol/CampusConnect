@@ -57,6 +57,20 @@ def get_clubs():
     clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
     return jsonify(clubs_data), 200
 
+
+# Endpoint to get a specific club by ID. This endpoint is accessible to all authenticated users.
+@club_bp.route('/<int:club_id>', methods=['GET'])
+@jwt_required()
+def get_club(club_id):
+
+    # Query the club by ID and return its details in a JSON format.
+    club = db.session.get(Club, club_id)
+    if not club:
+        return jsonify({'message': 'Club not found'}), 404
+
+    club_data = {'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description}
+    return jsonify(club_data), 200
+
 # Endpoint to update a club's information. This endpoint is accessible only to the club's Admin or Club Representative.
 @club_bp.route('/<int:club_id>', methods=['PATCH'])
 @jwt_required()
