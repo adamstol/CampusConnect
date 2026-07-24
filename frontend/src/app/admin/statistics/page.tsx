@@ -60,7 +60,7 @@ export default function StatisticsPage() {
 
         const profile = await response.json();
 
-        if (profile.role_name !== 'admin') {
+        if (profile.role_name !== 'Administrator') {
           router.push('/user-dashboard');
           return false;
         }

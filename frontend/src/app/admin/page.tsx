@@ -43,7 +43,7 @@ export default function AdminDashboardPage() {
         
          
         
-        if (profile.role_name !== 'admin') {
+        if (profile.role_name !== 'Administrator') {
             router.push('/user-dashboard');
             return;
           }
@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 
           <section className={cardClasses}>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -142,11 +142,32 @@ export default function AdminDashboardPage() {
               <li>Approve club applications</li>
               <li>Reject applications</li>
               <li>Delete clubs</li>
-              <li>Manage existing clubs</li>
+              <li>View club members</li>
             </ul>
 
             <Link href="/admin/clubs" className={buttonClasses}>
               Open Club Management
+            </Link>
+          </section>
+
+          <section className={cardClasses}>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Event Management
+            </h2>
+
+            <p className="mt-3 text-gray-600 dark:text-gray-400">
+              View all events and see who has registered for each event.
+            </p>
+
+            <ul className="mt-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 list-disc list-inside">
+              <li>View all events</li>
+              <li>See event registrations</li>
+              <li>View attendee details</li>
+              <li>Track registrations by club</li>
+            </ul>
+
+            <Link href="/admin/events" className={buttonClasses}>
+              Open Event Management
             </Link>
           </section>
 
