@@ -1,53 +1,228 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import EventCard from '@/components/EventCard';
-import { clubs } from '@/data/clubs';
+import ConfirmModal from '@/components/ConfirmModal';
+import { API_BASE_URL } from '@/lib/api';
+
+interface Club {
+  club_id: number;
+  club_name: string;
+  description: string | null;
+}
 
 interface ClubEvent {
-  id: number;
-  title: string;
-  location: string;
-  date: string;
+  event_id: number;
+  event_name: string;
+  description: string | null;
+  event_date: string;
+  location: string | null;
 }
 
 interface Announcement {
-  id: number;
+  announcement_id: number;
   title: string;
-  date: string;
   body: string;
+  created_at: string;
 }
 
-const upcomingEvents: ClubEvent[] = [
-  { id: 1, title: 'General Meeting', location: 'Student Centre - Room 204', date: 'July 18, 2026' },
-  { id: 2, title: 'New Member Social', location: 'Vari Hall', date: 'July 25, 2026' },
-  { id: 3, title: 'Workshop Night', location: 'Bergeron Centre', date: 'August 1, 2026' },
-];
+function formatEventDate(date: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
 
-const announcements: Announcement[] = [
-  {
-    id: 1,
-    title: 'Welcome back for the summer term!',
-    date: 'July 5, 2026',
-    body: "We're kicking off summer term with a general meeting. Come say hi and find out what we have planned this season.",
-  },
-  {
-    id: 2,
-    title: 'Executive applications now open',
-    date: 'June 28, 2026',
-    body: 'Interested in joining the executive team? Applications are open until the end of the month, reach out for details.',
-  },
-];
+function formatAnnouncementDate(date: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(date));
+}
 
 export default function ClubDetailPage() {
   const params = useParams<{ clubId: string }>();
-  const club = clubs.find((c) => c.id === Number(params.clubId));
+  const router = useRouter();
+  const [club, setClub] = useState<Club | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
-  if (!club) {
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<number>>(new Set());
+  const [rsvpSubmitting, setRsvpSubmitting] = useState<number | null>(null);
+
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]); 
+  const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/clubs/${params.clubId}`)
+      .then((res) => {
+        if (res.status === 404) {
+          setNotFound(true);
+          return null;
+        }
+        return res.ok ? res.json() : Promise.reject();
+      })
+      .then((data: Club | null) => {
+        if (data) setClub(data);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setIsLoading(false));
+  }, [params.clubId]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/events/club/${params.clubId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ClubEvent[]) => setEvents(data))
+      .catch(() => setEvents([]))
+      .finally(() => setIsEventsLoading(false));
+  }, [params.clubId]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/clubs/${params.clubId}/announcements`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Announcement[]) => setAnnouncements(data))
+      .catch(() => setAnnouncements([]))
+      .finally(() => setIsAnnouncementsLoading(false));
+  }, [params.clubId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/clubs/my-clubs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { club_id: number }[]) => {
+        setJoined(data.some((c) => c.club_id === Number(params.clubId)));
+      })
+      .catch(() => {});
+  }, [params.clubId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/events/my-registrations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { event_id: number }[]) => {
+        setRegisteredEventIds(new Set(data.map((r) => r.event_id)));
+      })
+      .catch(() => {});
+  }, [params.clubId]);
+
+  async function handleRsvpToggle(eventId: number) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push(`/login?redirect=/clubs/${params.clubId}`);
+      return;
+    }
+
+    setRsvpSubmitting(eventId);
+    const isRegistered = registeredEventIds.has(eventId);
+    const endpoint = isRegistered
+      ? `${API_BASE_URL}/events/${eventId}/cancel`
+      : `${API_BASE_URL}/events/${eventId}/register`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setRegisteredEventIds((prev) => {
+          const next = new Set(prev);
+          if (isRegistered) next.delete(eventId);
+          else next.add(eventId);
+          return next;
+        });
+      }
+    } catch {
+      // Leave state unchanged on network error.
+    } finally {
+      setRsvpSubmitting(null);
+    }
+  }
+
+  async function handleJoinToggle() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push(`/login?redirect=/clubs/${params.clubId}`);
+      return;
+    }
+
+    if (joined) {
+      setLeaveModalOpen(true);
+      return;
+    }
+
+    setJoinModalOpen(true);
+  }
+
+  async function executeJoinClub() {
+    setJoinModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/join`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setJoined(true);
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function executeLeaveClub() {
+    setLeaveModalOpen(false);
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/clubs/${params.clubId}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setJoined(false);
+    } catch {
+      // Network error — leave the button in its current state.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+          <p className="text-gray-600 dark:text-gray-400">Loading club...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (notFound || !club) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900">
         <Header />
@@ -83,59 +258,101 @@ export default function ClubDetailPage() {
           </div>
 
           <div className="flex-1">
-            <span className="inline-block text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-full px-3 py-1 mb-3">
-              {club.category}
-            </span>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">{club.name}</h1>
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-4">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>{club.location}</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">{club.description}</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">{club.club_name}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{club.description || 'No description yet.'}</p>
 
             <button
-              onClick={() => setJoined((prev) => !prev)}
+              onClick={handleJoinToggle}
+              disabled={isSubmitting}
               className={
                 joined
-                  ? 'py-2 px-6 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
-                  : 'py-2 px-6 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors'
+                  ? 'py-2 px-6 rounded-full font-medium border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                  : 'py-2 px-6 rounded-full font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50'
               }
             >
-              {joined ? 'Leave Club' : 'Join Club'}
+              {isSubmitting ? '...' : joined ? 'Leave Club' : 'Join Club'}
             </button>
           </div>
         </div>
 
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Upcoming Events</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} title={event.title} location={event.location} date={event.date} />
-            ))}
-          </div>
+          {isEventsLoading ? (
+            <p className="text-gray-600 dark:text-gray-400">Loading events...</p>
+          ) : events.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events.map((event) => (
+                <div key={event.event_id} className="relative">
+                  <EventCard
+                    title={event.event_name}
+                    location={event.location || 'York University'}
+                    date={formatEventDate(event.event_date)}
+                  />
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => handleRsvpToggle(event.event_id)}
+                      disabled={rsvpSubmitting === event.event_id}
+                      className={
+                        registeredEventIds.has(event.event_id)
+                          ? 'w-full rounded-full border border-red-600 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                          : 'w-full rounded-full bg-red-600 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50'
+                      }
+                    >
+                      {rsvpSubmitting === event.event_id
+                        ? '...'
+                        : registeredEventIds.has(event.event_id)
+                        ? 'Cancel RSVP'
+                        : 'RSVP'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">No upcoming events.</p>
+          )}
         </section>
 
         <section>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Announcements</h2>
-          <div className="space-y-4">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{announcement.title}</h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">{announcement.date}</span>
+          {isAnnouncementsLoading ? (
+            <p className="text-gray-600 dark:text-gray-400">Loading announcements...</p>
+          ) : announcements.length > 0 ? (
+            <div className="space-y-4">
+              {announcements.map((announcement) => (
+                <div
+                  key={announcement.announcement_id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{announcement.title}</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{formatAnnouncementDate(announcement.created_at)}</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">{announcement.body}</p>
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">{announcement.body}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">No announcements yet.</p>
+          )}
         </section>
       </main>
+      <ConfirmModal
+        isOpen={leaveModalOpen}
+        title="Leave Club"
+        message={`Are you sure you want to leave ${club.club_name}? You can rejoin at any time.`}
+        confirmLabel="Leave Club"
+        onConfirm={executeLeaveClub}
+        onCancel={() => setLeaveModalOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={joinModalOpen}
+        title="Join Club"
+        message={`Join ${club.club_name}? You'll receive announcements and can RSVP to events.`}
+        confirmLabel="Join Club"
+        onConfirm={executeJoinClub}
+        onCancel={() => setJoinModalOpen(false)}
+      />
     </div>
   );
 }

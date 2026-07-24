@@ -7,5 +7,6 @@ flask-jwt-extended
 bcrypt
 gunicorn
 flask-mail
+Flask-Migrate
 pytest
 Flask-Migrate

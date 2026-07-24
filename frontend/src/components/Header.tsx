@@ -7,6 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 export default function Header() {
   const [initials, setInitials] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -19,6 +20,9 @@ export default function Header() {
       .then((data) => {
         if (data?.first_name && data?.last_name) {
           setInitials(`${data.first_name[0]}${data.last_name[0]}`.toUpperCase());
+        }
+        if (data?.role_name) {
+          setRole(data.role_name);
         }
       })
       .catch(() => {});
@@ -43,6 +47,14 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/clubs" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Clubs</Link>
             <Link href="/events-this-week" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Events This Week</Link>
+            {role === 'Administrator' && (
+              <Link
+                href="/admin-dashboard"
+                className="text-red-600 hover:text-red-700 font-semibold"
+              >
+                Admin
+              </Link>
+            )}
 
             {/* Search */}
             <div className="relative">

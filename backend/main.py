@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from extensions import db, mail
 from auth.routes import auth_bp
 from club.routes import club_bp
@@ -39,7 +40,7 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
-# Initialize the database, JWT manager, and mail with the Flask app
+# Initialize the database, JWT manager, mail, and migration engine with the Flask app
 db.init_app(app)
 jwt = JWTManager(app)
 mail.init_app(app)
@@ -52,7 +53,11 @@ app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
 app.register_blueprint(admin_bp)
 
-# Drop all tables and recreate from scratch on every startup
+# NOTE: Schema changes are now handled by Flask-Migrate (`flask db upgrade`),
+# run as a pre-deploy step on Render. db.create_all() is left here only as a
+# safety net for a completely fresh/empty database (e.g. a new local dev
+# environment) — it will NOT alter existing tables or add new columns, so it
+# is not a substitute for generating and applying migrations.
 with app.app_context():
     db.create_all()
 
