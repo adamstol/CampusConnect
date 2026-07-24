@@ -53,19 +53,21 @@ def set_user_lock_status(user_id):
 # Endpoint to return summary counts for the admin dashboard. Only platform Administrators may access this.
 @admin_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
-def admin_dashboard():
+def dashboard():
     current_user_id = int(get_jwt_identity())
 
     if not _is_platform_admin(current_user_id):
-        return jsonify({'message': 'Unauthorized: Only administrators can view this dashboard'}), 403
+        return jsonify({'message': 'Unauthorized'}), 403
 
-    stats = {
-        'total_clubs': Club.query.count(),
-        'total_events': Event.query.count(),
-        'total_users': User.query.count()
-    }
-    return jsonify(stats), 200
+    total_users = User.query.count()
+    total_clubs = Club.query.filter_by(status='approved').count()
+    total_events = Event.query.count()
 
+    return jsonify({
+        'total_users': total_users,
+        'total_clubs': total_clubs,
+        'total_events': total_events
+    }), 200
 
 # Endpoint to list all users. Only platform Administrators may perform this action.
 @admin_bp.route('/users', methods=['GET'])
@@ -77,17 +79,37 @@ def list_users():
         return jsonify({'message': 'Unauthorized: Only administrators can perform this action'}), 403
 
     users = User.query.order_by(User.user_id.asc()).all()
-    return jsonify([{
-        'user_id': u.user_id,
-        'first_name': u.first_name,
-        'last_name': u.last_name,
-        'email': u.email,
-        'role_name': u.role_name,
-        'is_account_locked': u.is_account_locked,
-        'is_account_enabled': u.is_account_enabled,
-        'created_at': u.created_at.isoformat(),
-    } for u in users]), 200
 
+    users_data = []
+
+    for u in users:
+        # Determine role shown in admin dashboard
+        if u.role_name == "admin":
+            display_role = "Admin"
+        else:
+            club_rep = UserClub.query.filter_by(
+                user_id=u.user_id,
+                role="admin"
+            ).first()
+
+            if club_rep:
+                display_role = "Club Representative"
+            else:
+                display_role = "Student"
+
+        # Determine account status shown in admin dashboard
+        display_status = "Inactive" if u.is_account_locked else "Active"
+
+        users_data.append({
+            'user_id': u.user_id,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'email': u.email,
+            'role': display_role,
+            'status': display_status
+        })
+
+    return jsonify(users_data), 200
 
 # Endpoint to change a user's role. Only platform Administrators may perform this action.
 @admin_bp.route('/users/<int:user_id>/role', methods=['PATCH'])
