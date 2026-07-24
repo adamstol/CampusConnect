@@ -100,7 +100,7 @@ def test_create_club_as_representative_tc026(client, auth_headers_rep5, app):
     response = client.post('/clubs/', json=payload, headers=auth_headers_rep5)
     assert response.status_code == 201
     data = response.get_json()
-    assert data.get("message") == "Club created successfully"
+    assert data.get("message") == "Club application submitted successfully, pending administrator approval"
     club_id = data.get("club_id")
     assert club_id is not None
     with app.app_context():

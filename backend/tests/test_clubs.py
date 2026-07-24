@@ -18,8 +18,9 @@ def auth_headers(app):
 def seed_clubs(app):
     """Seed in-memory database with test clubs for TC-006."""
     with app.app_context():
-        c1 = Club(club_name="Chess Club", description="Competitive and casual chess play")
-        c2 = Club(club_name="Robotics Society", description="Build autonomous drones and bots")
+        c1 = Club(club_name="Chess Club", description="Competitive and casual chess play",status='approved')
+        c2 = Club(club_name="Robotics Society", description="Build autonomous drones and bots",status='approved')
+
 
         db.session.add_all([c1, c2])
         db.session.commit()
@@ -27,7 +28,7 @@ def seed_clubs(app):
         return [c1.club_id, c2.club_id]
 
 @pytest.mark.rtm("S-03")
-def test_list_all_active_clubs_tc006(client, auth_headers, seed_clubs):
+def test_list_all_active_clubs_tc006(client,auth_headers, seed_clubs):
     """
     TC-006 (S-03): List all active clubs via /clubs endpoint
     Requirement: 200 OK response with array of active club objects.
@@ -136,7 +137,8 @@ def test_submit_club_application_tc011(client, auth_headers):
 
     # 2. Assert response message and returned club_id
     data = response.get_json()
-    assert data.get("message") == "Club created successfully"
+
+    assert data.get("message") == "Club application submitted successfully, pending administrator approval"
     assert "club_id" in data
 
 @pytest.mark.rtm("S-05")
