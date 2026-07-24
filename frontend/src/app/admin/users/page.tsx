@@ -205,34 +205,35 @@ export default function UserManagementPage() {
 
   useEffect(() => {
 
-    const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token');
 
 
-    if (!token) {
-      router.push('/login');
-      return;
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+
+  const verifiedToken: string = token;
+
+
+  async function initialize() {
+
+    const isAdmin = await verifyAdmin(verifiedToken);
+
+
+    if (isAdmin) {
+      await loadUsers(verifiedToken);
     }
 
 
-    async function initialize() {
-
-      const isAdmin = await verifyAdmin(token);
-
-
-      if (isAdmin) {
-        await loadUsers(token);
-      }
+    setIsLoading(false);
+  }
 
 
-      setIsLoading(false);
-    }
+  initialize();
 
 
-    initialize();
-
-
-  }, [verifyAdmin, loadUsers, router]);
-
+}, [verifyAdmin, loadUsers, router]);
 
 
   if (isLoading) {
