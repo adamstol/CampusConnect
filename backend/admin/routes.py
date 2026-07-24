@@ -4,6 +4,7 @@ from extensions import db
 from auth.user import User
 from club.club import Club
 from event.event import Event
+from userclub.userclub import UserClub
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -11,7 +12,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 def _is_platform_admin(user_id):
     """Return True if the user is a platform Administrator."""
     user = db.session.get(User, user_id)
-    return user is not None and user.role_name == 'Administrator'
+    return user is not None and user.role_name == 'admin'
 
 
 # Endpoint to lock or unlock a user account. Only platform Administrators may perform this action.
@@ -35,14 +36,19 @@ def set_user_lock_status(user_id):
         return jsonify({'message': 'is_account_locked is required'}), 400
 
     target_user.is_account_locked = bool(data['is_account_locked'])
+
+    # Reset failed login attempts when unlocking an account
+    if not target_user.is_account_locked:
+        target_user.failed_login_attempts = 0
+
     db.session.commit()
 
     return jsonify({
         'message': 'User account status updated successfully',
         'user_id': target_user.user_id,
-        'is_account_locked': target_user.is_account_locked
+        'is_account_locked': target_user.is_account_locked,
+        'failed_login_attempts': target_user.failed_login_attempts
     }), 200
-
 
 # Endpoint to return summary counts for the admin dashboard. Only platform Administrators may access this.
 @admin_bp.route('/dashboard', methods=['GET'])
@@ -80,3 +86,77 @@ def admin_delete_user(user_id):
     db.session.commit()
 
     return jsonify({'message': 'User account deleted successfully'}), 200
+
+# Endpoint to retrieve failed login attempt information.
+# Only platform Administrators may access this.
+@admin_bp.route('/security', methods=['GET'])
+@jwt_required()
+def get_security_logs():
+
+    current_user_id = int(get_jwt_identity())
+
+    if not _is_platform_admin(current_user_id):
+        return jsonify({
+            'message': 'Unauthorized: Only administrators can view security data'
+        }), 403
+
+    users = User.query.all()
+
+    security_logs = []
+
+    for user in users:
+        security_logs.append({
+            'user_id': user.user_id,
+            'email': user.email,
+            'failed_login_attempts': user.failed_login_attempts
+        })
+
+    return jsonify(security_logs), 200
+
+# Endpoint to retrieve all users for admin user management.
+# Only platform Administrators may access this.
+@admin_bp.route('/users', methods=['GET'])
+@jwt_required()
+def get_all_users():
+
+    current_user_id = int(get_jwt_identity())
+
+    if not _is_platform_admin(current_user_id):
+        return jsonify({
+            'message': 'Unauthorized: Only administrators can view users'
+        }), 403
+
+    users = User.query.all()
+
+    user_list = []
+
+    for user in users:
+
+        # Determine if user is a club representative
+        is_club_representative = UserClub.query.filter_by(
+            user_id=user.user_id,
+            role='admin'
+        ).first() is not None
+
+        role = (
+            'Club Representative'
+            if is_club_representative
+            else 'Student'
+        )
+
+        status = (
+            'Inactive'
+            if user.is_account_locked
+            else 'Active'
+        )
+
+        user_list.append({
+            'user_id': user.user_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'role': role,
+            'status': status
+        })
+
+    return jsonify(user_list), 200
