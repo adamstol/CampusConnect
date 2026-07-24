@@ -17,6 +17,7 @@ from event.event import Event
 from userevent.userevent import UserEvent
 from announcement.announcement import Announcement
 from admin.routes import admin_bp
+from flask_migrate import Migrate
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 db.init_app(app)
 jwt = JWTManager(app)
 mail.init_app(app)
-migrate = Migrate(app, db)
+migrate = Migrate(app,db)
 
 # Register the authentication blueprint with the Flask app
 app.register_blueprint(auth_bp)

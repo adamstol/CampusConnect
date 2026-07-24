@@ -32,14 +32,17 @@ def test_admin_create_club_tc039(client, app):
     # 4. Verify endpoint response
     assert response.status_code == 201
     data = response.get_json()
-    assert data.get("message") == "Club created successfully"
+    assert data.get("message") == "Club application submitted successfully, pending administrator approval"
     assert "club_id" in data
+    assert data.get("status") == "pending"
+
     created_club_id = data["club_id"]
     # 5. Verify database records (Club and UserClub assignment)
     with app.app_context():
         created_club = db.session.get(Club, created_club_id)
         assert created_club is not None
         assert created_club.club_name == "Admin Created Robotics Club"
+        assert created_club.status == "pending"
         # Confirm user_id=1 was added as admin in UserClub
         membership = UserClub.query.filter_by(
             user_id=admin_id, 
@@ -47,7 +50,8 @@ def test_admin_create_club_tc039(client, app):
         ).first()
         
         assert membership is not None
-        assert membership.role == "admin"
+        assert membership.role == "admin"    
+
 @pytest.mark.rtm("A-01")
 def test_admin_join_club_tc038(client, app):
     """
@@ -107,7 +111,7 @@ def seed_admin_user(app):
             last_name="Admin",
             email="admin@campusconnect.test",
             password="not-used-in-these-tests",
-            role_name="Administrator"
+            role_name="admin"
         )
         db.session.add(admin)
         db.session.commit()
@@ -350,3 +354,94 @@ def test_admin_delete_user_cascades_memberships_and_registrations_tc057(client, 
         # club and event themselves remain untouched
         assert db.session.get(Club, target_club_id) is not None
         assert db.session.get(Event, target_event_id) is not None
+
+
+@pytest.fixture
+def seed_pending_club(app):
+    """Seed a club with status='pending' for approval/rejection test cases."""
+    with app.app_context():
+        club = Club(club_name="Anime Club", description="Weekly screenings and discussion", status="pending")
+        db.session.add(club)
+        db.session.commit()
+        return club.club_id
+@pytest.mark.rtm("A-02")
+def test_approve_pending_club_application_tc040(client, auth_headers_admin1, seed_pending_club, app):
+    """
+    TC-040 (A-02): Approve a pending club application updates its status
+    Requirement: Club.status set to 'approved'; club becomes visible in browse list.
+    Note: There is no separate Application entity — the Club row itself
+    carries the pending/approved/rejected status, identified by club_id.
+    """
+    target_club_id = seed_pending_club
+
+    response = client.patch(f'/admin/clubs/{target_club_id}/approve', headers=auth_headers_admin1)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data.get("message") == "Club application approved"
+    assert data.get("status") == "approved"
+
+    with app.app_context():
+        club = db.session.get(Club, target_club_id)
+        assert club.status == "approved"
+
+    # Confirm the approved club now appears in the public browse list
+    browse_res = client.get('/clubs/', headers=auth_headers_admin1)
+    assert browse_res.status_code == 200
+    browse_ids = {club['club_id'] for club in browse_res.get_json()}
+    assert target_club_id in browse_ids
+@pytest.mark.rtm("A-02")
+def test_rejected_club_not_visible_to_students_tc041(client, auth_headers_admin1, seed_pending_club, app):
+    """
+    TC-041 (A-02): Rejected application's club is not visible to students
+    Requirement: Club.status set to 'rejected'; club does not appear in
+    GET /clubs/ browse list.
+    """
+    target_club_id = seed_pending_club
+
+    reject_res = client.patch(f'/admin/clubs/{target_club_id}/reject', headers=auth_headers_admin1)
+    assert reject_res.status_code == 200
+    data = reject_res.get_json()
+    assert data.get("status") == "rejected"
+
+    with app.app_context():
+        club = db.session.get(Club, target_club_id)
+        assert club.status == "rejected"
+
+    # Confirm the rejected club does NOT appear in the browse list
+    browse_res = client.get('/clubs/', headers=auth_headers_admin1)
+    assert browse_res.status_code == 200
+    browse_ids = {club['club_id'] for club in browse_res.get_json()}
+    assert target_club_id not in browse_ids
+
+@pytest.mark.rtm("A-03")
+def test_get_all_registered_users_tc042(client, auth_headers_admin1, seed_target_user_42, app):
+    """
+    TC-042 (A-03): Get all registered users via admin endpoint
+    Requirement: 200 response with full list of registered users.
+    Note: get_all_users() returns a derived 'role' (Club Representative/Student
+    via UserClub lookup) and 'status' (Active/Inactive from is_account_locked),
+    not the raw role_name/is_account_locked fields.
+    """
+    response = client.get('/admin/users', headers=auth_headers_admin1)
+
+    assert response.status_code == 200
+    data = response.get_json()
+
+    # 1 admin (seeded via auth_headers_admin1) + user 42
+    assert isinstance(data, list)
+    assert len(data) == 2
+    user_ids = {user['user_id'] for user in data}
+    assert user_ids == {1, 42}
+
+    first = data[0]
+    assert 'user_id' in first
+    assert 'first_name' in first
+    assert 'email' in first
+    assert 'role' in first
+    assert 'status' in first
+
+    # user 42 seeded as an unlocked student with no club admin membership
+    user_42_entry = next(user for user in data if user['user_id'] == 42)
+    assert user_42_entry['role'] == 'Student'
+    assert user_42_entry['status'] == 'Active'
