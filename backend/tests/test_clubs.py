@@ -4,6 +4,8 @@ from club.club import Club
 from extensions import db
 from userclub.userclub import UserClub
 from event.event import Event
+from auth.user import User
+from datetime import datetime,timezone
 
 @pytest.fixture
 def auth_headers(app):
@@ -13,6 +15,28 @@ def auth_headers(app):
         access_token = create_access_token(identity="1")
         return {"Authorization": f"Bearer {access_token}"}
 
+@pytest.fixture
+def seed_user(app):
+    with app.app_context():
+        user = User(
+            user_id=1,
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            password="password",
+            role_name="Club Representative",
+            is_email_verified=True,
+            failed_login_attempts=0,
+            is_account_locked=False,
+            is_account_enabled=True,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+        return user
 
 @pytest.fixture
 def seed_clubs(app):
@@ -68,7 +92,7 @@ def test_get_specific_club_by_id_tc007(client, auth_headers, seed_clubs):
 
 
 @pytest.mark.rtm("S-04")
-def test_join_club_creates_membership_tc008(client, auth_headers, seed_clubs, app):
+def test_join_club_creates_membership_tc008(client, auth_headers,seed_user, seed_clubs, app):
     """
     TC-008 (S-04): Join a club creates a membership record
     Requirement: 200 OK response and database membership row created upon joining.
@@ -91,7 +115,7 @@ def test_join_club_creates_membership_tc008(client, auth_headers, seed_clubs, ap
         assert membership is not None
 
 @pytest.mark.rtm("S-04")
-def test_leave_club_removes_membership_tc009(client, auth_headers, seed_clubs, app):
+def test_leave_club_removes_membership_tc009(client, auth_headers,seed_user, seed_clubs, app):
     """
     TC-009 (S-04): Leave a club removes the membership record
     Requirement: 200 OK response and database membership row removed upon leaving.
@@ -119,7 +143,7 @@ def test_leave_club_removes_membership_tc009(client, auth_headers, seed_clubs, a
         assert membership is None
 
 @pytest.mark.rtm("S-05")
-def test_submit_club_application_tc011(client, auth_headers):
+def test_submit_club_application_tc011(client, auth_headers, seed_user):
     """
     TC-011 (S-05): Submit new club application with valid details
     Requirement: 201 Created response and club record created upon submission.
@@ -131,7 +155,6 @@ def test_submit_club_application_tc011(client, auth_headers):
 
     # POST request to /clubs/
     response = client.post('/clubs/', json=payload, headers=auth_headers)
-
     # 1. Assert status code 201 Created
     assert response.status_code == 201
 
@@ -142,7 +165,7 @@ def test_submit_club_application_tc011(client, auth_headers):
     assert "club_id" in data
 
 @pytest.mark.rtm("S-05")
-def test_submit_duplicate_club_application_tc012(client, auth_headers):
+def test_submit_duplicate_club_application_tc012(client, auth_headers,seed_user):
     """
     TC-012 (S-05): Submitting a duplicate/conflicting club application
     Requirement: 400 Bad Request when attempting to create a club with an existing name.
@@ -229,7 +252,7 @@ def test_get_club_details_tc013(client, auth_headers, seed_clubs, app):
 
 
 @pytest.mark.rtm("S-09")
-def test_get_user_memberships_tc020(client, auth_headers, seed_clubs, app):
+def test_get_user_memberships_tc020(client, auth_headers, seed_user,seed_clubs, app):
     """
     TC-020 (S-09): Get memberships for the current user
     Requirement: 200 OK response listing only clubs the user has joined.
