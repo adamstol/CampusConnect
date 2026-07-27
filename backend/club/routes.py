@@ -99,7 +99,7 @@ def delete_club(club_id):
     is_owner = user_club is not None and user_club.role in ['admin', 'representative']
 
     requesting_user = db.session.get(User, current_user_id)
-    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'admin'
+    is_platform_admin = requesting_user is not None and requesting_user.role_name == 'Administrator'
 
     if not (is_owner or is_platform_admin):
         return jsonify({'message': 'Unauthorized: Only admins and representatives can perform this action'}), 403
