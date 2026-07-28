@@ -22,7 +22,13 @@ from flask_migrate import Migrate
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', os.getenv('FRONTEND_ORIGIN')]) #FRONTEND_ORIGIN points to the latest frontend build
+frontend_origins = [
+    origin.strip()
+    for origin in os.getenv('FRONTEND_ORIGINS', os.getenv('FRONTEND_ORIGIN', '')).split(',')
+    if origin.strip()
+]
+frontend_origins.append('http://localhost:3000')
+CORS(app, origins=frontend_origins)
 
 # Configure the SQLAlchemy database URI using the environment variable from the .env file.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')

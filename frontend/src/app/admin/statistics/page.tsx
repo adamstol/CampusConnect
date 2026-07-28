@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCallback, useEffect, useState } from 'react';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from '@/lib/api';
 
 interface DashboardStats {
   total_users: number;

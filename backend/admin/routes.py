@@ -280,7 +280,8 @@ def admin_list_events():
         'club_name': event.club.club_name,
         'event_date': event.event_date.isoformat(),
         'location': event.location,
-        'status': event.status
+        'status': event.status,
+        'registration_count': UserEvent.query.filter_by(event_id=event.event_id).count()
     } for event in events]), 200
 
 

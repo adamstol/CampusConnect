@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCallback, useEffect, useState } from 'react';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from '@/lib/api';
 
 interface EventItem {
   event_id: number;
@@ -14,6 +13,7 @@ interface EventItem {
   event_date: string;
   location: string;
   status: 'pending' | 'approved' | 'rejected';
+  registration_count: number;
 }
 
 export default function EventsManagementPage() {
@@ -236,7 +236,7 @@ export default function EventsManagementPage() {
                         Location: {event.location}
                       </p>
 
-                      <p className="mt-2 text-sm">
+                      <div className="mt-2 flex flex-wrap gap-2">
                         <span
                           className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${
                             event.status === 'approved'
@@ -248,7 +248,10 @@ export default function EventsManagementPage() {
                         >
                           {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                         </span>
-                      </p>
+                        <span className="inline-block rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                          {event.registration_count} {event.registration_count === 1 ? 'registration' : 'registrations'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
