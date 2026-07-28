@@ -21,6 +21,8 @@ class User(db.Model):
     password_reset_token_expires_at = db.Column(db.DateTime, nullable=True)
     email_verification_token = db.Column(db.String(), nullable=True)
     email_verification_token_expires_at = db.Column(db.DateTime, nullable=True)
+    notify_in_app = db.Column(db.Boolean, default=True, nullable=False)
+    notify_email = db.Column(db.Boolean, default=True, nullable=False)
 
     def __repr__(self):
         return f'<User {self.email}>'

@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
-from extensions import db
+from flask_mail import Message
+from extensions import db, mail
 from announcement.announcement import Announcement
 from club.club import Club
 from auth.user import User
 from userclub.userclub import UserClub
+from notification.notification import Notification
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 announcement_bp = Blueprint('announcement', __name__)
@@ -45,7 +47,51 @@ def create_announcement(club_id):
         body=body
     )
     db.session.add(announcement)
+    db.session.flush()  # assign announcement_id before creating notifications
+
+    # Notify all club members except the poster
+    members = UserClub.query.filter_by(club_id=club_id).all()
+    notif_title = f"New announcement from {club.club_name}"
+    notif_body = f"{title}: {body[:120]}{'...' if len(body) > 120 else ''}"
+
+    for uc in members:
+        if uc.user_id == current_user_id:
+            continue
+        member = db.session.get(User, uc.user_id)
+        if not member:
+            continue
+        if member.notify_in_app:
+            db.session.add(Notification(
+                user_id=uc.user_id,
+                title=notif_title,
+                body=notif_body,
+                club_id=club_id,
+                announcement_id=announcement.announcement_id,
+            ))
+
     db.session.commit()
+
+    # Send email notifications (non-blocking — failures are logged, not raised)
+    for uc in members:
+        if uc.user_id == current_user_id:
+            continue
+        member = db.session.get(User, uc.user_id)
+        if member and member.email and member.notify_email:
+            try:
+                msg = Message(
+                    subject=f"[CampusConnect] New announcement from {club.club_name}",
+                    recipients=[member.email],
+                    body=(
+                        f"Hi {member.first_name},\n\n"
+                        f"{club.club_name} has posted a new announcement:\n\n"
+                        f"{title}\n\n"
+                        f"{body}\n\n"
+                        f"— The CampusConnect Team"
+                    ),
+                )
+                mail.send(msg)
+            except Exception as e:
+                print(f"[WARN] Failed to send announcement email to {member.email}: {e}")
 
     return jsonify({'message': 'Announcement created successfully', 'announcement_id': announcement.announcement_id}), 201
 

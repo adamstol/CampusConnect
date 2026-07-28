@@ -84,7 +84,6 @@ export default function UserDashboardPage() {
   const [settings, setSettings] = useState({
     notifications: true,
     emailUpdates: true,
-    eventReminders: true,
     publicProfile: false,
     language: 'en',
   });
@@ -127,6 +126,11 @@ export default function UserDashboardPage() {
         setFirstName(profile.first_name || '');
         setLastName(profile.last_name || '');
         setRole(profile.role_name || '');
+        setSettings((prev) => ({
+          ...prev,
+          notifications: profile.notify_in_app ?? true,
+          emailUpdates: profile.notify_email ?? true,
+        }));
       }
 
       if (eventsResponse.ok) {
@@ -176,8 +180,27 @@ export default function UserDashboardPage() {
     Promise.resolve().then(() => loadDashboardData(token));
   }, [loadDashboardData, router]);
 
+  const prefKeyMap: Record<string, string> = {
+    notifications: 'notify_in_app',
+    emailUpdates: 'notify_email',
+  };
+
   const toggleSetting = (key: string) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+    setSettings((prev) => {
+      const updated = { ...prev, [key]: !prev[key as keyof typeof prev] };
+      const backendKey = prefKeyMap[key];
+      if (backendKey) {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          fetch(`${API_BASE_URL}/auth/profile`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [backendKey]: updated[key as keyof typeof updated] }),
+          }).catch(() => {});
+        }
+      }
+      return updated;
+    });
   };
 
   const handleSignOut = () => {
@@ -628,40 +651,6 @@ export default function UserDashboardPage() {
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                       settings.emailUpdates ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Event Reminders</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Remind before events</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSetting('eventReminders')}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.eventReminders ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      settings.eventReminders ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Public Profile</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Make profile visible</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSetting('publicProfile')}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.publicProfile ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      settings.publicProfile ? 'translate-x-6' : 'translate-x-0.5'
                     }`} />
                   </button>
                 </div>
