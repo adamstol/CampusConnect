@@ -5,6 +5,7 @@ from auth.user import User
 from club.club import Club
 from event.event import Event
 from userclub.userclub import UserClub
+from userevent.userevent import UserEvent
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -264,4 +265,143 @@ def reject_club(club_id):
     return jsonify({'message': 'Club application rejected', 'club_id': club.club_id, 'status': club.status}), 200
 
 
+# Endpoint to list all events and their approval status. Only platform Administrators.
+@admin_bp.route('/events', methods=['GET'])
+@jwt_required()
+def admin_list_events():
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can view this'}), 403
+
+    events = Event.query.order_by(Event.event_date.asc()).all()
+    return jsonify([{
+        'event_id': event.event_id,
+        'event_name': event.event_name,
+        'club_name': event.club.club_name,
+        'event_date': event.event_date.isoformat(),
+        'location': event.location,
+        'status': event.status,
+        'registration_count': UserEvent.query.filter_by(event_id=event.event_id).count()
+    } for event in events]), 200
+
+
+# Endpoint to approve an event. Only platform Administrators.
+@admin_bp.route('/events/<int:event_id>/approve', methods=['PATCH'])
+@jwt_required()
+def approve_event(event_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can approve events'}), 403
+
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    event.status = 'approved'
+    db.session.commit()
+    return jsonify({'message': 'Event approved', 'event_id': event.event_id, 'status': event.status}), 200
+
+
+# Endpoint to reject an event. Only platform Administrators.
+@admin_bp.route('/events/<int:event_id>/reject', methods=['PATCH'])
+@jwt_required()
+def reject_event(event_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can reject events'}), 403
+
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    event.status = 'rejected'
+    db.session.commit()
+    return jsonify({'message': 'Event rejected', 'event_id': event.event_id, 'status': event.status}), 200
+
+
+# Endpoint to list all clubs with member counts. Only platform Administrators.
+@admin_bp.route('/clubs', methods=['GET'])
+@jwt_required()
+def admin_list_clubs():
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can view this'}), 403
+
+    clubs = Club.query.order_by(Club.club_id.asc()).all()
+    data = []
+    for club in clubs:
+        member_count = UserClub.query.filter_by(club_id=club.club_id).count()
+        data.append({
+            'club_id': club.club_id,
+            'club_name': club.club_name,
+            'description': club.description,
+            'status': club.status,
+            'member_count': member_count,
+            'created_at': club.created_at.isoformat() if club.created_at else None
+        })
+    return jsonify(data), 200
+
+
+# Endpoint to view members of a specific club. Only platform Administrators.
+@admin_bp.route('/clubs/<int:club_id>/members', methods=['GET'])
+@jwt_required()
+def admin_view_club_members(club_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can view this'}), 403
+
+    club = db.session.get(Club, club_id)
+    if not club:
+        return jsonify({'message': 'Club not found'}), 404
+
+    members = db.session.query(User, UserClub).join(
+        UserClub, User.user_id == UserClub.user_id
+    ).filter(UserClub.club_id == club_id).all()
+
+    data = {
+        'club_id': club.club_id,
+        'club_name': club.club_name,
+        'members': [{
+            'user_id': user.user_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'role': user_club.role,
+            'joined_at': user_club.joined_at.isoformat() if user_club.joined_at else None
+        } for user, user_club in members]
+    }
+    return jsonify(data), 200
+
+
+# Endpoint to view registrations for a specific event. Only platform Administrators.
+@admin_bp.route('/events/<int:event_id>/registrations', methods=['GET'])
+@jwt_required()
+def admin_view_event_registrations(event_id):
+    current_user_id = int(get_jwt_identity())
+    if not _is_platform_admin(current_user_id):
+        return jsonify({'message': 'Unauthorized: Only administrators can view this'}), 403
+
+    event = db.session.get(Event, event_id)
+    if not event:
+        return jsonify({'message': 'Event not found'}), 404
+
+    registrations = db.session.query(User, UserEvent).join(
+        UserEvent, User.user_id == UserEvent.user_id
+    ).filter(UserEvent.event_id == event_id).all()
+
+    data = {
+        'event_id': event.event_id,
+        'event_name': event.event_name,
+        'event_date': event.event_date.isoformat() if event.event_date else None,
+        'club_name': event.club.club_name,
+        'registrations': [{
+            'user_id': user.user_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'status': user_event.status,
+            'registered_at': user_event.registered_at.isoformat() if user_event.registered_at else None
+        } for user, user_event in registrations]
+    }
+    return jsonify(data), 200
 

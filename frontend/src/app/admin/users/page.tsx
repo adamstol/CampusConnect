@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCallback, useEffect, useState } from 'react';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from '@/lib/api';
 
 interface User {
   user_id: number;
@@ -51,7 +50,7 @@ export default function UserManagementPage() {
 
         const profile = await response.json();
 
-        if (profile.role_name !== 'admin') {
+        if (profile.role_name !== 'Administrator') {
           router.push('/user-dashboard');
           return false;
         }
