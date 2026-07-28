@@ -18,6 +18,17 @@ interface DashboardEvent {
   location: string | null;
 }
 
+interface RegisteredEvent {
+  event_id: number;
+  club_id: number;
+  club_name: string;
+  event_name: string;
+  event_date: string;
+  location: string | null;
+  status: string;
+  registered_at: string;
+}
+
 interface ManagedClub {
   club_id: number;
   club_name: string;
@@ -56,6 +67,7 @@ export default function UserDashboardPage() {
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('');
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [registeredEvents, setRegisteredEvents] = useState<RegisteredEvent[]>([]);
   const [myClubs, setMyClubs] = useState<MyClub[]>([]);
   const [managedClubs, setManagedClubs] = useState<ManagedClub[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -87,11 +99,14 @@ export default function UserDashboardPage() {
     setIsLoadingEvents(true);
 
     try {
-      const [profileResponse, eventsResponse, clubsResponse, myClubsResponse] = await Promise.all([
+      const [profileResponse, eventsResponse, registeredEventsResponse, clubsResponse, myClubsResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/events/my-club-events`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/events/my-events`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/clubs/my-managed-clubs`, {
@@ -102,7 +117,7 @@ export default function UserDashboardPage() {
         }),
       ]);
 
-      if ([profileResponse, eventsResponse, clubsResponse, myClubsResponse].some((response) => response.status === 401)) {
+      if ([profileResponse, eventsResponse, registeredEventsResponse, clubsResponse, myClubsResponse].some((response) => response.status === 401)) {
         handleUnauthorized();
         return;
       }
@@ -119,6 +134,12 @@ export default function UserDashboardPage() {
       } else {
         setEvents([]);
         setEventMessage('Unable to load your events.');
+      }
+
+      if (registeredEventsResponse.ok) {
+        setRegisteredEvents((await registeredEventsResponse.json()) as RegisteredEvent[]);
+      } else {
+        setRegisteredEvents([]);
       }
 
       if (clubsResponse.ok) {
@@ -307,6 +328,49 @@ export default function UserDashboardPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">You haven&apos;t joined any clubs yet.</p>
                   <Link href="/clubs" className="mt-3 inline-block text-sm font-semibold text-red-600 hover:text-red-700">
                     Browse clubs &rarr;
+                  </Link>
+                </div>
+              )}
+            </section>
+
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Registrations</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your registered events</h2>
+                </div>
+                <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {registeredEvents.length} {registeredEvents.length === 1 ? 'event' : 'events'}
+                </span>
+              </div>
+
+              {isLoadingEvents ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">Loading registrations...</p>
+              ) : registeredEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {registeredEvents.map((event) => (
+                    <article
+                      key={event.event_id}
+                      className="flex flex-col justify-between gap-3 rounded-lg border border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-start"
+                    >
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{event.event_name}</h3>
+                        <p className="mt-1 text-sm font-medium text-red-600">{event.club_name}</p>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          {formatEventDate(event.event_date)}{event.location ? ` · ${event.location}` : ''}
+                        </p>
+                      </div>
+                      <span className="w-fit rounded-full bg-green-100 px-2 py-1 text-xs font-semibold capitalize text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        {event.status.replace('_', ' ')}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">You have not registered for any events yet.</p>
+                  <Link href="/events-this-week" className="mt-3 inline-block text-sm font-semibold text-red-600 hover:text-red-700">
+                    Browse events &rarr;
                   </Link>
                 </div>
               )}

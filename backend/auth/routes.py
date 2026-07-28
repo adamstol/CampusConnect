@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flask_mail import Message
@@ -44,7 +45,8 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    verify_url = f"http://localhost:8080/auth/verify-email?token={token}"
+    base_url = os.getenv('BASE_URL', 'http://localhost:8080')
+    verify_url = f"{base_url}/auth/verify-email?token={token}"
     msg = Message(
         subject='CampusConnect — Verify your email',
         recipients=[email],
@@ -56,7 +58,10 @@ def register():
             f"— The CampusConnect Team"
         )
     )
-    mail.send(msg)
+    try:
+        mail.send(msg)
+    except Exception as e:
+        print(f"[WARN] Failed to send verification email to {email}: {e}")
 
     return jsonify({'message': 'Successfully Registered. Please verify your email.'}), 201
 
@@ -220,7 +225,10 @@ def request_password_reset():
             f"— The CampusConnect Team"
         )
     )
-    mail.send(msg)
+    try:
+        mail.send(msg)
+    except Exception as e:
+        print(f"[WARN] Failed to send verification email to {email}: {e}")
 
     return jsonify({'message': 'Password reset email sent'}), 200
 
