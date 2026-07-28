@@ -16,6 +16,8 @@ from userclub.userclub import UserClub
 from event.event import Event
 from userevent.userevent import UserEvent
 from announcement.announcement import Announcement
+from notification.notification import Notification
+from notification.routes import notification_bp
 from admin.routes import admin_bp
 from flask_migrate import Migrate
 
@@ -58,6 +60,7 @@ app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(notification_bp)
 
 # NOTE: Schema changes are now handled by Flask-Migrate (`flask db upgrade`),
 # run as a pre-deploy step on Render. db.create_all() is left here only as a
