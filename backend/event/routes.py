@@ -1,13 +1,14 @@
 from flask import Blueprint, request, jsonify
-from extensions import db
+from flask_mail import Message
+from extensions import db, mail
 from event.event import Event
 from club.club import Club
 from userclub.userclub import UserClub
 from userevent.userevent import UserEvent
 from auth.user import User
+from notification.notification import Notification
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, time, timedelta, timezone
-from auth.user import User
 
 event_bp = Blueprint('event', __name__, url_prefix='/events')
 
@@ -76,7 +77,53 @@ def create_event():
         location=location
     )
     db.session.add(new_event)
+    db.session.flush()  # assign event_id before creating notifications
+
+    # Notify all club members except the creator
+    members = UserClub.query.filter_by(club_id=club_id).all()
+    formatted_date = event_datetime.strftime('%b %-d at %-I:%M %p')
+    notif_title = f"New event from {club.club_name}"
+    notif_body = f"{event_name} — {formatted_date}{f', {location}' if location else ''}"
+
+    for uc in members:
+        if uc.user_id == current_user_id:
+            continue
+        member = db.session.get(User, uc.user_id)
+        if not member:
+            continue
+        if member.notify_in_app:
+            db.session.add(Notification(
+                user_id=uc.user_id,
+                title=notif_title,
+                body=notif_body,
+                club_id=club_id,
+            ))
+
     db.session.commit()
+
+    # Send email notifications (non-blocking — failures are logged, not raised)
+    for uc in members:
+        if uc.user_id == current_user_id:
+            continue
+        member = db.session.get(User, uc.user_id)
+        if member and member.email and member.notify_email:
+            try:
+                msg = Message(
+                    subject=f"[CampusConnect] New event from {club.club_name}",
+                    recipients=[member.email],
+                    body=(
+                        f"Hi {member.first_name},\n\n"
+                        f"{club.club_name} has scheduled a new event:\n\n"
+                        f"{event_name}\n"
+                        f"When: {formatted_date}\n"
+                        f"{f'Where: {location}' if location else ''}\n\n"
+                        f"{description or ''}\n\n"
+                        f"— The CampusConnect Team"
+                    ),
+                )
+                mail.send(msg)
+            except Exception as e:
+                print(f"[WARN] Failed to send event email to {member.email}: {e}")
 
     return jsonify({'message': 'Event created successfully', 'event_id': new_event.event_id}), 201
 
