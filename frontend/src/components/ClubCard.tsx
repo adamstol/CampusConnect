@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/lib/api';
@@ -10,17 +11,17 @@ interface ClubCardProps {
   id: number;
   name: string;
   description: string;
+  logoUrl?: string | null;
   initialJoined?: boolean;
 }
 
-export default function ClubCard({ id, name, description, initialJoined = false }: ClubCardProps) {
+export default function ClubCard({ id, name, description, logoUrl, initialJoined = false }: ClubCardProps) {
   const router = useRouter();
   const [joined, setJoined] = useState(initialJoined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
-  // Keep joined in sync if initialJoined updates later (e.g. membership loads after this card renders).
   const [prevInitialJoined, setPrevInitialJoined] = useState(initialJoined);
   if (initialJoined !== prevInitialJoined) {
     setPrevInitialJoined(initialJoined);
@@ -51,7 +52,7 @@ export default function ClubCard({ id, name, description, initialJoined = false 
       });
       if (response.ok) setJoined(true);
     } catch {
-      // Network error — leave the button in its current state.
+      // Network error - leave the button in its current state.
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +69,7 @@ export default function ClubCard({ id, name, description, initialJoined = false 
       });
       if (response.ok) setJoined(false);
     } catch {
-      // Network error — leave the button in its current state.
+      // Network error - leave the button in its current state.
     } finally {
       setIsSubmitting(false);
     }
@@ -76,10 +77,20 @@ export default function ClubCard({ id, name, description, initialJoined = false 
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
-      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-        <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 00-3-3.87m-9 0a4 4 0 00-3 3.87" />
-        </svg>
+      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+        {logoUrl ? (
+          <Image
+            src={logoUrl}
+            alt={`${name} logo`}
+            width={300}
+            height={128}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 00-3-3.87m-9 0a4 4 0 00-3 3.87" />
+          </svg>
+        )}
       </div>
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{name}</h3>

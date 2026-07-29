@@ -8,6 +8,7 @@ interface ApiEvent {
   event_name: string;
   event_date: string;
   location: string | null;
+  image_url: string | null;
 }
 
 
@@ -35,6 +36,7 @@ async function getHomeEvents(): Promise<CarouselEvent[]> {
       title: event.event_name,
       location: event.location || 'York University',
       date: formatEventDate(event.event_date),
+      imageUrl: event.image_url ?? undefined,
     }));
   } catch {
     return [];
