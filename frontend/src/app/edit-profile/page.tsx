@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
+import { t, type Locale } from '@/lib/translations';
 
 interface ProfileFormData {
   first_name: string;
@@ -19,7 +20,8 @@ interface NotifyPrefs {
 
 export default function EditProfilePage() {
   const router = useRouter();
-  const { resetTheme } = useTheme();
+  const { resetTheme, language } = useTheme();
+  const lang = language as Locale;
   const [formData, setFormData] = useState<ProfileFormData>({
     first_name: '',
     last_name: '',
@@ -192,18 +194,18 @@ export default function EditProfilePage() {
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Profile</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Update your name and email address.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t(lang, 'editProfile')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">{t(lang, 'editProfileSubtitle')}</p>
         </div>
 
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           {isLoading ? (
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Loading your profile...</p>
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t(lang, 'loadingProfile')}</p>
           ) : (
             <form className="grid grid-cols-1 gap-5 md:grid-cols-2" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="first_name" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                  First Name
+                  {t(lang, 'fieldFirstName')}
                 </label>
                 <input
                   id="first_name"
@@ -212,14 +214,14 @@ export default function EditProfilePage() {
                   value={formData.first_name}
                   onChange={handleChange}
                   className={inputClasses}
-                  placeholder="First name"
+                  placeholder={t(lang, 'fieldFirstName')}
                   required
                 />
               </div>
 
               <div>
                 <label htmlFor="last_name" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                  Last Name
+                  {t(lang, 'fieldLastName')}
                 </label>
                 <input
                   id="last_name"
@@ -228,14 +230,14 @@ export default function EditProfilePage() {
                   value={formData.last_name}
                   onChange={handleChange}
                   className={inputClasses}
-                  placeholder="Last name"
+                  placeholder={t(lang, 'fieldLastName')}
                   required
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label htmlFor="email" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                  Email
+                  {t(lang, 'fieldEmail')}
                 </label>
                 <input
                   id="email"
@@ -268,13 +270,13 @@ export default function EditProfilePage() {
                   disabled={isSaving}
                   className="rounded-lg bg-red-600 px-5 py-3 font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? t(lang, 'saving') : t(lang, 'saveChanges')}
                 </button>
                 <Link
                   href="/change-password"
                   className="rounded-lg px-5 py-3 font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Change Password
+                  {t(lang, 'changePassword')}
                 </Link>
               </div>
             </form>
@@ -283,12 +285,12 @@ export default function EditProfilePage() {
 
         {/* Notification Preferences */}
         <section className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Notification Preferences</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Choose how you want to be notified when a club posts an announcement.</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t(lang, 'notificationPreferences')}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t(lang, 'notificationPrefsDetail')}</p>
           <div className="space-y-4">
             {([
-              { key: 'notify_in_app' as const, label: 'In-app notifications', description: 'Show a bell badge in the header when new announcements are posted.' },
-              { key: 'notify_email' as const, label: 'Email notifications', description: 'Receive an email when a club you belong to posts an announcement.' },
+              { key: 'notify_in_app' as const, label: t(lang, 'inAppNotifications'), description: 'Show a bell badge in the header when new announcements are posted.' },
+              { key: 'notify_email' as const, label: t(lang, 'emailNotifications'), description: 'Receive an email when a club you belong to posts an announcement.' },
             ]).map(({ key, label, description }) => (
               <div key={key} className="flex items-center justify-between gap-4">
                 <div>
