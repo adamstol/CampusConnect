@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
+import { t, type Locale } from '@/lib/translations';
 
 interface PasswordFormData {
   password: string;
@@ -16,7 +17,8 @@ const MIN_PASSWORD_LENGTH = 8;
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const { resetTheme } = useTheme();
+  const { resetTheme, language } = useTheme();
+  const lang = language as Locale;
   const [formData, setFormData] = useState<PasswordFormData>({
     password: '',
     confirmPassword: '',
@@ -124,15 +126,15 @@ export default function ChangePasswordPage() {
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Change Password</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Choose a new password for your account.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t(lang, 'changePassword')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">{t(lang, 'changePasswordSubtitle')}</p>
         </div>
 
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <form className="grid grid-cols-1 gap-5" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                New Password
+                {t(lang, 'fieldNewPassword')}
               </label>
               <input
                 id="password"
@@ -149,7 +151,7 @@ export default function ChangePasswordPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                Confirm New Password
+                {t(lang, 'fieldConfirmPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -183,13 +185,13 @@ export default function ChangePasswordPage() {
                 disabled={isSaving}
                 className="rounded-lg bg-red-600 px-5 py-3 font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
-                {isSaving ? 'Saving...' : 'Update Password'}
+                {isSaving ? t(lang, 'saving') : t(lang, 'updatePassword')}
               </button>
               <Link
                 href="/edit-profile"
                 className="rounded-lg px-5 py-3 font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                Edit Profile
+                {t(lang, 'editProfile')}
               </Link>
             </div>
           </form>

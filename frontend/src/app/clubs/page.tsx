@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import ClubCard from '@/components/ClubCard';
 import { API_BASE_URL } from '@/lib/api';
+import { useTheme } from '@/context/ThemeContext';
+import { t, type Locale } from '@/lib/translations';
 
 interface Club {
   club_id: number;
@@ -13,6 +15,8 @@ interface Club {
 }
 
 export default function ClubsPage() {
+  const { language } = useTheme();
+  const lang = language as Locale;
   const [searchQuery, setSearchQuery] = useState('');
   const [clubs, setClubs] = useState<Club[]>([]);
   const [joinedClubIds, setJoinedClubIds] = useState<Set<number>>(new Set());
@@ -49,10 +53,10 @@ export default function ClubsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Explore Clubs at York University
+            {t(lang, 'exploreClubs')}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Find a community that matches your interests and get involved on campus
+            {t(lang, 'exploreClubsSubtitle')}
           </p>
         </div>
 
@@ -62,7 +66,7 @@ export default function ClubsPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search clubs by name"
+              placeholder={t(lang, 'searchClubs')}
               className="w-full pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             />
             <svg className="w-5 h-5 text-red-600 absolute right-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +76,7 @@ export default function ClubsPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Loading clubs...</p>
+          <p className="text-center text-gray-600 dark:text-gray-400">{t(lang, 'loadingClubs')}</p>
         ) : error ? (
           <p className="text-center text-red-600 dark:text-red-400">{error}</p>
         ) : filteredClubs.length > 0 ? (
@@ -82,7 +86,7 @@ export default function ClubsPage() {
                 key={club.club_id}
                 id={club.club_id}
                 name={club.club_name}
-                description={club.description || 'No description yet.'}
+                description={club.description || t(lang, 'noDescription')}
                 logoUrl={club.logo_url}
                 initialJoined={joinedClubIds.has(club.club_id)}
               />
@@ -90,11 +94,11 @@ export default function ClubsPage() {
           </div>
         ) : clubs.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400">
-            No clubs available yet.
+            {t(lang, 'noClubsAvailable')}
           </p>
         ) : (
           <p className="text-center text-gray-600 dark:text-gray-400">
-            No clubs found matching &quot;{searchQuery}&quot;.
+            {t(lang, 'noClubsMatching').replace('{query}', searchQuery)}
           </p>
         )}
       </main>

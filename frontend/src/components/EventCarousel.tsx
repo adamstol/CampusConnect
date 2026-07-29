@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import EventCard from './EventCard';
 
 export interface CarouselEvent {
@@ -15,8 +15,30 @@ interface EventCarouselProps {
   events: CarouselEvent[];
 }
 
+function useVisibleCount() {
+  const [count, setCount] = useState(3);
+  useEffect(() => {
+    function update() {
+      if (window.innerWidth < 640) setCount(1);
+      else if (window.innerWidth < 1024) setCount(2);
+      else setCount(3);
+    }
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return count;
+}
+
 export default function EventCarousel({ events = [] }: EventCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const visibleCount = useVisibleCount();
+  const maxIndex = Math.max(0, events.length - visibleCount);
+
+  // Clamp if visibleCount increases (e.g. resize from mobile to desktop)
+  useEffect(() => {
+    setCurrentIndex((i) => Math.min(i, maxIndex));
+  }, [maxIndex]);
 
   if (events.length === 0) {
     return (
@@ -29,62 +51,76 @@ export default function EventCarousel({ events = [] }: EventCarouselProps) {
     );
   }
 
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % events.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + events.length) % events.length);
-  };
+  const cardWidth = 100 / visibleCount;
+  const prev = () => setCurrentIndex((i) => Math.max(0, i - 1));
+  const next = () => setCurrentIndex((i) => Math.min(maxIndex, i + 1));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="relative">
-        {/* Navigation Arrows */}
-        <button
-          onClick={prevSlide}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 z-10 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <button
-          onClick={nextSlide}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 z-10 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        {/* Event Cards */}
-        <div className="flex gap-6 overflow-x-auto py-4 px-12">
-          {events.map((event) => (
-            <div key={event.id} className="flex-shrink-0 w-80">
-              <EventCard
-                title={event.title}
-                location={event.location}
-                date={event.date}
-                imageUrl={event.imageUrl}
-              />
-            </div>
-          ))}
+        {/* Slider track */}
+        <div className="overflow-hidden rounded-xl">
+          <div
+            className="flex transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateX(-${currentIndex * cardWidth}%)` }}
+          >
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="shrink-0 px-2"
+                style={{ width: `${cardWidth}%` }}
+              >
+                <EventCard
+                  title={event.title}
+                  location={event.location}
+                  date={event.date}
+                  imageUrl={event.imageUrl}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Pagination Dots */}
+        {/* Arrows */}
+        {currentIndex > 0 && (
+          <button
+            onClick={prev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Previous"
+          >
+            <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+        {currentIndex < maxIndex && (
+          <button
+            onClick={next}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Next"
+          >
+            <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Pagination dots — one per possible position */}
+      {maxIndex > 0 && (
         <div className="flex justify-center gap-2 mt-6">
-          {events.map((_, index) => (
+          {Array.from({ length: maxIndex + 1 }).map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
               className={`w-2 h-2 rounded-full transition-colors ${
                 index === currentIndex ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
               }`}
+              aria-label={`Go to position ${index + 1}`}
             />
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
