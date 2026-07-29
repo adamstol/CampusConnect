@@ -22,6 +22,7 @@ interface ClubEvent {
   description: string | null;
   event_date: string;
   location: string | null;
+  image_url: string | null;
 }
 
 interface Announcement {
@@ -390,15 +391,15 @@ export default function ClubDetailPage() {
                     title={event.event_name}
                     location={event.location || 'York University'}
                     date={formatEventDate(event.event_date)}
-                  />
-                  <div className="px-4 pb-4">
+                    imageUrl={event.image_url ?? undefined}
+                  >
                     <button
                       onClick={() => handleRsvpToggle(event.event_id)}
                       disabled={rsvpSubmitting === event.event_id}
                       className={
                         registeredEventIds.has(event.event_id)
-                          ? 'w-full rounded-full border border-red-600 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
-                          : 'w-full rounded-full bg-red-600 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50'
+                          ? 'mt-4 w-full rounded-full border border-red-600 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50'
+                          : 'mt-4 w-full rounded-full bg-red-600 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50'
                       }
                     >
                       {rsvpSubmitting === event.event_id
@@ -407,7 +408,7 @@ export default function ClubDetailPage() {
                           ? 'Cancel RSVP'
                           : 'RSVP'}
                     </button>
-                  </div>
+                  </EventCard>
                 </div>
               ))}
             </div>
