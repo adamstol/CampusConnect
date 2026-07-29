@@ -11,8 +11,9 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
-  role: string;
-  status: string;
+  role_name: string;
+  is_account_locked: boolean;
+  is_account_enabled: boolean;
 }
 
 export default function UserManagementPage() {
@@ -153,6 +154,44 @@ export default function UserManagementPage() {
 
     },
     [handleUnauthorized,loadUsers, router]
+  );
+
+  const updateUserRole = useCallback(
+    async (token: string, userId: number, roleName: string) => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/users/${userId}/role`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ role_name: roleName }),
+          }
+        );
+
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+
+        if (response.status === 403) {
+          router.push('/user-dashboard');
+          return;
+        }
+
+        if (!response.ok) {
+          console.error('Failed to update user role');
+          return;
+        }
+
+        await loadUsers(token);
+      } catch {
+        console.error('Unable to update user role');
+      }
+    },
+    [handleUnauthorized, loadUsers, router]
   );
 
   const deleteUser = useCallback(
@@ -344,19 +383,33 @@ export default function UserManagementPage() {
                       </p>
 
 
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Role: {user.role}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <label className="text-gray-600 dark:text-gray-400 text-sm">Role:</label>
+                        <select
+                          value={user.role_name}
+                          onChange={(e) => {
+                            const token = localStorage.getItem('access_token');
+                            if (token) {
+                              updateUserRole(token, user.user_id, e.target.value);
+                            }
+                          }}
+                          className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="Student">Student</option>
+                          <option value="Club Representative">Club Representative</option>
+                          <option value="Administrator">Administrator</option>
+                        </select>
+                      </div>
 
 
                       <p
                         className={`text-sm font-semibold ${
-                          user.status === 'Active'
+                          !user.is_account_locked
                             ? 'text-green-600 dark:text-green-400'
                             : 'text-red-600 dark:text-red-400'
                         }`}
                       >
-                        Status: {user.status}
+                        Status: {user.is_account_locked ? 'Locked' : 'Active'}
                       </p>
 
 

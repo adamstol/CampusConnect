@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { API_BASE_URL } from '@/lib/api';
 import RoleBadge from '@/components/RoleBadge';
+import { t, ti, tc, type Locale } from '@/lib/translations';
 
 interface DashboardEvent {
   event_id: number;
@@ -49,8 +50,8 @@ interface EventFormData {
   location: string;
 }
 
-function formatEventDate(date: string) {
-  return new Intl.DateTimeFormat('en-US', {
+function formatEventDate(date: string, locale = 'en') {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'short',
     month: 'long',
     day: 'numeric',
@@ -62,7 +63,7 @@ function formatEventDate(date: string) {
 
 export default function UserDashboardPage() {
   const router = useRouter();
-  const { isDark, toggleDark, resetTheme } = useTheme();
+  const { isDark, toggleDark, resetTheme, language, setLanguage } = useTheme();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('');
@@ -85,7 +86,6 @@ export default function UserDashboardPage() {
     notifications: true,
     emailUpdates: true,
     publicProfile: false,
-    language: 'en',
   });
 
   const handleUnauthorized = useCallback(() => {
@@ -271,14 +271,16 @@ export default function UserDashboardPage() {
         eventDate: '',
         location: '',
       }));
-      setEventMessage(data.message || 'Event created successfully.');
+      setEventMessage(data.message || t(language as Locale, 'eventCreated'));
       await loadDashboardData(token);
     } catch {
-      setEventMessage('Unable to create event right now.');
+      setEventMessage(t(language as Locale, 'eventCreateError'));
     } finally {
       setIsSubmittingEvent(false);
     }
   }
+
+  const lang = language as Locale;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -308,9 +310,9 @@ export default function UserDashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {firstName || 'there'}!</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{ti(lang, 'welcomeBack', { firstName: firstName || 'there' })}</h1>
           <div className="flex items-center gap-3 mt-2">
-            <p className="text-gray-600 dark:text-gray-400">Here&apos;s what&apos;s happening with your clubs and account</p>
+            <p className="text-gray-600 dark:text-gray-400">{t(lang, 'dashboardSubtitle')}</p>
             {role && <RoleBadge role={role} size="md" />}
           </div>
         </div>
@@ -321,16 +323,16 @@ export default function UserDashboardPage() {
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Memberships</p>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your clubs</h2>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">{t(lang, 'memberships')}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t(lang, 'yourClubs')}</h2>
                 </div>
                 <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {myClubs.length} {myClubs.length === 1 ? 'club' : 'clubs'}
+                  {tc(lang, myClubs.length, 'clubSingular', 'clubPlural')}
                 </span>
               </div>
 
               {isLoadingEvents ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">Loading clubs...</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'loadingClubs')}</p>
               ) : myClubs.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {myClubs.map((club) => (
@@ -348,9 +350,9 @@ export default function UserDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">You haven&apos;t joined any clubs yet.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'noClubs')}</p>
                   <Link href="/clubs" className="mt-3 inline-block text-sm font-semibold text-red-600 hover:text-red-700">
-                    Browse clubs &rarr;
+                    {t(lang, 'browseClubs')}
                   </Link>
                 </div>
               )}
@@ -359,16 +361,16 @@ export default function UserDashboardPage() {
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Registrations</p>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your registered events</h2>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">{t(lang, 'registrations')}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t(lang, 'yourRegisteredEvents')}</h2>
                 </div>
                 <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {registeredEvents.length} {registeredEvents.length === 1 ? 'event' : 'events'}
+                  {tc(lang, registeredEvents.length, 'eventSingular', 'eventPlural')}
                 </span>
               </div>
 
               {isLoadingEvents ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">Loading registrations...</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'loadingRegistrations')}</p>
               ) : registeredEvents.length > 0 ? (
                 <div className="space-y-3">
                   {registeredEvents.map((event) => (
@@ -380,7 +382,7 @@ export default function UserDashboardPage() {
                         <h3 className="font-semibold text-gray-900 dark:text-white">{event.event_name}</h3>
                         <p className="mt-1 text-sm font-medium text-red-600">{event.club_name}</p>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                          {formatEventDate(event.event_date)}{event.location ? ` · ${event.location}` : ''}
+                          {formatEventDate(event.event_date, lang)}{event.location ? ` · ${event.location}` : ''}
                         </p>
                       </div>
                       <span className="w-fit rounded-full bg-green-100 px-2 py-1 text-xs font-semibold capitalize text-green-800 dark:bg-green-900/30 dark:text-green-300">
@@ -391,9 +393,9 @@ export default function UserDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">You have not registered for any events yet.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'noRegistrations')}</p>
                   <Link href="/events-this-week" className="mt-3 inline-block text-sm font-semibold text-red-600 hover:text-red-700">
-                    Browse events &rarr;
+                    {t(lang, 'browseEvents')}
                   </Link>
                 </div>
               )}
@@ -403,16 +405,16 @@ export default function UserDashboardPage() {
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Your Clubs</p>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Club events</h2>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">{t(lang, 'yourClubsLabel')}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t(lang, 'clubEvents')}</h2>
                 </div>
                 <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {events.length} {events.length === 1 ? 'event' : 'events'}
+                  {tc(lang, events.length, 'eventSingular', 'eventPlural')}
                 </span>
               </div>
 
               {isLoadingEvents ? (
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Loading your events...</p>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t(lang, 'loadingEvents')}</p>
               ) : events.length > 0 ? (
                 <div className="space-y-4">
                   {events.map((event) => (
@@ -429,13 +431,13 @@ export default function UserDashboardPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            <span>{event.location || 'York University'}</span>
+                            <span>{event.location || t(lang, 'defaultLocation')}</span>
                           </div>
                           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mt-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span>{formatEventDate(event.event_date)}</span>
+                            <span>{formatEventDate(event.event_date, lang)}</span>
                           </div>
                         </div>
                       </div>
@@ -444,14 +446,14 @@ export default function UserDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No club events yet</h3>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Events from clubs you belong to will appear here.</p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t(lang, 'noClubEvents')}</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{t(lang, 'noClubEventsDetail')}</p>
                 </div>
               )}
 
               <Link href="/events-this-week">
                 <button className="mt-4 text-red-600 hover:text-red-700 font-medium">
-                  Browse more events &rarr;
+                  {t(lang, 'browseMoreEvents')}
                 </button>
               </Link>
             </section>
@@ -459,10 +461,10 @@ export default function UserDashboardPage() {
             {(role === 'Club Representative' || role === 'Administrator') && (
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="mb-6">
-                <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Create</p>
-                <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Add an event</h2>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Events can be created for clubs where you are an admin or representative.
+                  <p className="text-sm font-semibold uppercase tracking-wide text-red-600">{t(lang, 'createLabel')}</p>
+                  <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{t(lang, 'addAnEvent')}</h2>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {t(lang, 'createEventHint')}
                 </p>
               </div>
 
@@ -470,7 +472,7 @@ export default function UserDashboardPage() {
                 <form className="grid grid-cols-1 gap-5 md:grid-cols-2" onSubmit={handleCreateEvent}>
                   <div>
                     <label htmlFor="clubId" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Club
+                      {t(lang, 'fieldClub')}
                     </label>
                     <select
                       id="clubId"
@@ -490,7 +492,7 @@ export default function UserDashboardPage() {
 
                   <div>
                     <label htmlFor="eventDate" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Date and Time
+                      {t(lang, 'fieldDateTime')}
                     </label>
                     <input
                       id="eventDate"
@@ -505,7 +507,7 @@ export default function UserDashboardPage() {
 
                   <div>
                     <label htmlFor="eventName" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Event Name
+                      {t(lang, 'fieldEventName')}
                     </label>
                     <input
                       id="eventName"
@@ -514,14 +516,14 @@ export default function UserDashboardPage() {
                       value={eventForm.eventName}
                       onChange={handleEventFormChange}
                       className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                      placeholder="Campus mixer"
+                      placeholder={t(lang, 'placeholderEventName')}
                       required
                     />
                   </div>
 
                   <div>
                     <label htmlFor="location" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Location
+                      {t(lang, 'fieldLocation')}
                     </label>
                     <input
                       id="location"
@@ -530,13 +532,13 @@ export default function UserDashboardPage() {
                       value={eventForm.location}
                       onChange={handleEventFormChange}
                       className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                      placeholder="Student Centre"
+                      placeholder={t(lang, 'placeholderLocation')}
                     />
                   </div>
 
                   <div className="md:col-span-2">
                     <label htmlFor="description" className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Description
+                      {t(lang, 'fieldDescription')}
                     </label>
                     <textarea
                       id="description"
@@ -544,7 +546,7 @@ export default function UserDashboardPage() {
                       value={eventForm.description}
                       onChange={handleEventFormChange}
                       className="min-h-28 w-full resize-y rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                      placeholder="A short summary of the event."
+                      placeholder={t(lang, 'placeholderDescription')}
                     />
                   </div>
 
@@ -560,19 +562,19 @@ export default function UserDashboardPage() {
                       disabled={isSubmittingEvent}
                       className="rounded-lg bg-red-600 px-5 py-3 font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                     >
-                      {isSubmittingEvent ? 'Creating...' : 'Create Event'}
+                      {isSubmittingEvent ? t(lang, 'creating') : t(lang, 'createEvent')}
                     </button>
                   </div>
                 </form>
               ) : (
                 <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">No managed clubs</h3>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create or manage a club before adding events.</p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t(lang, 'noManagedClubs')}</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{t(lang, 'noManagedClubsDetail')}</p>
                   <Link
                     href="/userclubs"
                     className="mt-5 inline-flex rounded-lg bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
                   >
-                    Manage Clubs
+                    {t(lang, 'manageClubs')}
                   </Link>
                 </div>
               )}
@@ -582,7 +584,7 @@ export default function UserDashboardPage() {
 
           <div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Settings</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t(lang, 'settings')}</h2>
 
               <div className="space-y-6">
                 {(role === 'Club Representative' || role === 'Administrator') && (
@@ -590,7 +592,7 @@ export default function UserDashboardPage() {
                     href="/userclubs"
                     className="block w-full rounded-lg bg-red-600 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-red-700"
                   >
-                    Manage Clubs
+                    {t(lang, 'manageClubs')}
                   </Link>
                 )}
 
@@ -599,7 +601,7 @@ export default function UserDashboardPage() {
                     href="/admin"
                     className="block w-full rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-gray-800 dark:hover:bg-gray-600"
                   >
-                    Admin Dashboard
+                    {t(lang, 'adminDashboard')}
                   </Link>
                 )}
 
@@ -608,7 +610,7 @@ export default function UserDashboardPage() {
                     href="/manage-events"
                     className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    Manage Events
+                    {t(lang, 'manageEvents')}
                   </Link>
                 )}
 
@@ -617,14 +619,14 @@ export default function UserDashboardPage() {
                     href="/manage-announcements"
                     className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    Announcements
+                    {t(lang, 'announcements')}
                   </Link>
                 )}
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Notifications</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Receive push notifications</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">{t(lang, 'notifications')}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'notificationsDetail')}</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('notifications')}
@@ -640,8 +642,8 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Email Updates</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Weekly event digest</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">{t(lang, 'emailUpdates')}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'emailUpdatesDetail')}</p>
                   </div>
                   <button
                     onClick={() => toggleSetting('emailUpdates')}
@@ -657,8 +659,8 @@ export default function UserDashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Dark Mode</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Switch to dark theme</p>
+                    <h3 className="font-medium text-gray-900 dark:text-white">{t(lang, 'darkMode')}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'darkModeDetail')}</p>
                   </div>
                   <button
                     onClick={toggleDark}
@@ -673,10 +675,10 @@ export default function UserDashboardPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Language</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">{t(lang, 'language')}</h3>
                   <select
-                    value={settings.language}
-                    onChange={(e) => setSettings((prev) => ({ ...prev, language: e.target.value }))}
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as Locale)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 text-black dark:text-white dark:bg-gray-700"
                   >
                     <option value="en">English</option>
@@ -689,13 +691,13 @@ export default function UserDashboardPage() {
 
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                   <Link href="/edit-profile" className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Edit Profile
+                    {t(lang, 'editProfile')}
                   </Link>
                   <Link href="/change-password" className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Change Password
+                    {t(lang, 'changePassword')}
                   </Link>
                   <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                    Sign Out
+                    {t(lang, 'signOut')}
                   </button>
                 </div>
               </div>
