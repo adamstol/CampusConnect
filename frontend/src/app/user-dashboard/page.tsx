@@ -596,7 +596,7 @@ export default function UserDashboardPage() {
 
                 {role === 'Administrator' && (
                   <Link
-                    href="/admin-dashboard"
+                    href="/admin"
                     className="block w-full rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-gray-800 dark:hover:bg-gray-600"
                   >
                     Admin Dashboard

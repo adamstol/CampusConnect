@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+import Image from 'next/image';
 import EventRegisterButton from '@/components/EventRegisterButton';
 import { useEventRegistration } from '@/hooks/useEventRegistration';
 
@@ -10,6 +12,7 @@ export interface WeeklyEvent {
   description: string | null;
   event_date: string;
   location: string | null;
+  image_url: string | null;
 }
 
 interface WeeklyEventsGridProps {
@@ -38,7 +41,16 @@ export default function WeeklyEventsGrid({ events }: WeeklyEventsGridProps) {
           key={event.event_id}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
         >
-          <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+          <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+            {event.image_url ? (
+              <Image
+                src={event.image_url}
+                alt={event.event_name}
+                width={400}
+                height={192}
+                className="w-full h-full object-cover"
+              />
+            ) : (
             <svg
               className="w-16 h-16 text-gray-400 dark:text-gray-500"
               fill="none"
@@ -52,6 +64,7 @@ export default function WeeklyEventsGrid({ events }: WeeklyEventsGridProps) {
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
+            )}
           </div>
           <div className="p-4 flex flex-col flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">

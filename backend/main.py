@@ -19,6 +19,7 @@ from announcement.announcement import Announcement
 from notification.notification import Notification
 from notification.routes import notification_bp
 from admin.routes import admin_bp
+from upload.routes import upload_bp
 from flask_migrate import Migrate
 
 load_dotenv()
@@ -77,3 +78,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+

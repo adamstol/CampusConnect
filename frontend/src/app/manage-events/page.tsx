@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
@@ -19,6 +20,7 @@ interface ClubEvent {
   description: string | null;
   event_date: string;
   location: string | null;
+  image_url: string | null;
 }
 
 interface EventFormData {
@@ -88,6 +90,8 @@ export default function ManageEventsPage() {
   const [addUserId, setAddUserId] = useState('');
   const [isAddingAttendee, setIsAddingAttendee] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<number | null>(null);
+  const [uploadingImageEventId, setUploadingImageEventId] = useState<number | null>(null);
+  const imageInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const [modal, setModal] = useState<{
     isOpen: boolean; title: string; message: string; onConfirm: () => void;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
@@ -335,7 +339,7 @@ export default function ManageEventsPage() {
       const data = await res.json() as Attendee[];
       setAttendeesByEvent((prev) => ({ ...prev, [eventId]: data }));
     } catch {
-      // non-critical — silently ignore
+      // non-critical â€” silently ignore
     } finally {
       setLoadingAttendeesId(null);
     }
@@ -421,6 +425,31 @@ export default function ManageEventsPage() {
     );
   }
 
+  async function handleEventImageUpload(eventId: number, file: File) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    setUploadingImageEventId(eventId);
+    try {
+      const presignRes = await fetch(`${API_BASE_URL}/upload/events/${eventId}/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content_type: file.type }),
+      });
+      if (!presignRes.ok) throw new Error('Failed to get upload URL');
+      const { upload_url } = await presignRes.json();
+      await fetch(upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      notify('Image uploaded successfully.', false);
+      await loadEvents(selectedClubId);
+    } catch {
+      notify('Image upload failed. Please try again.', true);
+    } finally {
+      setUploadingImageEventId(null);
+    }
+  }
   const inputClasses =
     'w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100';
 
@@ -680,6 +709,35 @@ export default function ManageEventsPage() {
                             >
                               {expandedAttendeesId === event.event_id ? 'Hide Attendees' : 'Attendees'}
                             </button>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            {event.image_url && (
+                              <div className="relative w-24 h-16 rounded overflow-hidden">
+                                <Image src={event.image_url} alt="event image" fill className="object-cover" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              disabled={uploadingImageEventId === event.event_id}
+                              onClick={() => imageInputRefs.current[event.event_id]?.click()}
+                              className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {uploadingImageEventId === event.event_id
+                                ? 'Uploading...'
+                                : event.image_url
+                                ? 'Change Image'
+                                : 'Upload Image'}
+                            </button>
+                            <input
+                              ref={(el) => { imageInputRefs.current[event.event_id] = el; }}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleEventImageUpload(event.event_id, f);
+                              }}
+                            />
                           </div>
 
                           {expandedAttendeesId === event.event_id && (

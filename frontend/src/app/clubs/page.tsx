@@ -9,6 +9,7 @@ interface Club {
   club_id: number;
   club_name: string;
   description: string | null;
+  logo_url: string | null;
 }
 
 export default function ClubsPage() {
@@ -82,6 +83,7 @@ export default function ClubsPage() {
                 id={club.club_id}
                 name={club.club_name}
                 description={club.description || 'No description yet.'}
+                logoUrl={club.logo_url}
                 initialJoined={joinedClubIds.has(club.club_id)}
               />
             ))}
@@ -99,3 +101,4 @@ export default function ClubsPage() {
     </div>
   );
 }
+

@@ -22,6 +22,7 @@ def serialize_event(event):
         'description': event.description,
         'event_date': event.event_date.isoformat(),
         'location': event.location,
+        'image_url': event.image_url,
         'status': event.status
     }
 
@@ -512,3 +513,4 @@ def get_my_events_count():
         'total': UserEvent.query.filter_by(user_id=current_user_id).count()
     }
     return jsonify(counts), 200
+

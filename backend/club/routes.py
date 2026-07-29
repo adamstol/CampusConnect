@@ -54,7 +54,7 @@ def get_clubs():
     
     # Only return clubs that have been approved by an administrator.
     clubs = Club.query.filter_by(status='approved').all()
-    clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description} for club in clubs]
+    clubs_data = [{'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description, 'logo_url': club.logo_url} for club in clubs]
     return jsonify(clubs_data), 200
 
 # Endpoint to get a specific club by ID. Public — no authentication required, for club detail pages.
@@ -202,3 +202,4 @@ def get_my_managed_clubs():
     memberships = UserClub.query.filter_by(user_id=current_user_id).filter(UserClub.role.in_(['admin', 'representative'])).all()
     managed_clubs = [{'club_id': membership.club_id, 'club_name': membership.club.club_name, 'role': membership.role} for membership in memberships]
     return jsonify(managed_clubs), 200
+

@@ -114,7 +114,7 @@ export default function Header() {
             <Link href="/events-this-week" className="text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-gray-200 font-medium">Events This Week</Link>
             {role === 'Administrator' && (
               <Link
-                href="/admin-dashboard"
+                href="/admin"
                 className="text-red-600 hover:text-red-700 font-semibold"
               >
                 Admin

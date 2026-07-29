@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
@@ -12,6 +13,7 @@ interface Club {
   club_id: number;
   club_name: string;
   description: string | null;
+  logo_url: string | null;
 }
 
 interface ClubEvent {
@@ -64,8 +66,12 @@ export default function ClubDetailPage() {
   const [registeredEventIds, setRegisteredEventIds] = useState<Set<number>>(new Set());
   const [rsvpSubmitting, setRsvpSubmitting] = useState<number | null>(null);
 
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]); 
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/clubs/${params.clubId}`)
@@ -77,7 +83,10 @@ export default function ClubDetailPage() {
         return res.ok ? res.json() : Promise.reject();
       })
       .then((data: Club | null) => {
-        if (data) setClub(data);
+        if (data) {
+          setClub(data);
+          setLogoUrl(data.logo_url);
+        }
       })
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false));
@@ -111,6 +120,21 @@ export default function ClubDetailPage() {
         setJoined(data.some((c) => c.club_id === Number(params.clubId)));
       })
       .catch(() => {});
+  }, [params.clubId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/clubs/my-managed-clubs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { club_id: number; role: string }[]) => {
+        const managedClub = data.find((item) => item.club_id === Number(params.clubId));
+        setUserRole(managedClub ? managedClub.role : null);
+      })
+      .catch(() => setUserRole(null));
   }, [params.clubId]);
 
   useEffect(() => {
@@ -157,6 +181,54 @@ export default function ClubDetailPage() {
       // Leave state unchanged on network error.
     } finally {
       setRsvpSubmitting(null);
+    }
+  }
+
+  async function handleLogoUpload(file: File) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    setIsUploadingLogo(true);
+
+    try {
+      const uploadResponse = await fetch(`${API_BASE_URL}/upload/clubs/${params.clubId}/logo`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content_type: file.type }),
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to create upload URL');
+      }
+
+      const { upload_url, public_url } = (await uploadResponse.json()) as {
+        upload_url: string;
+        public_url: string;
+      };
+
+      const fileUploadResponse = await fetch(upload_url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
+      });
+
+      if (!fileUploadResponse.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      setLogoUrl(public_url);
+    } catch {
+      // Leave the current logo unchanged on upload failure.
+    } finally {
+      setIsUploadingLogo(false);
+      if (logoInputRef.current) {
+        logoInputRef.current.value = '';
+      }
     }
   }
 
@@ -251,10 +323,41 @@ export default function ClubDetailPage() {
         </Link>
 
         <div className="flex flex-col md:flex-row gap-8 mb-16">
-          <div className="w-full md:w-64 h-48 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-            <svg className="w-16 h-16 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 00-3-3.87m-9 0a4 4 0 00-3 3.87" />
-            </svg>
+          <div className="relative w-full md:w-64 h-48 shrink-0 overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700">
+            {logoUrl ? (
+              <Image src={logoUrl} alt="club logo" fill className="object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <svg className="w-16 h-16 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 00-3-3.87m-9 0a4 4 0 00-3 3.87" />
+                </svg>
+              </div>
+            )}
+
+            {userRole ? (
+              <>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void handleLogoUpload(file);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={isUploadingLogo}
+                  className="absolute bottom-3 right-3 rounded-full bg-black/70 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isUploadingLogo ? 'Uploading...' : logoUrl ? 'Change Logo' : 'Upload Logo'}
+                </button>
+              </>
+            ) : null}
           </div>
 
           <div className="flex-1">
@@ -301,8 +404,8 @@ export default function ClubDetailPage() {
                       {rsvpSubmitting === event.event_id
                         ? '...'
                         : registeredEventIds.has(event.event_id)
-                        ? 'Cancel RSVP'
-                        : 'RSVP'}
+                          ? 'Cancel RSVP'
+                          : 'RSVP'}
                     </button>
                   </div>
                 </div>
