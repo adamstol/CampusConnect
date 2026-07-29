@@ -12,6 +12,11 @@ interface ProfileFormData {
   email: string;
 }
 
+interface NotifyPrefs {
+  notify_in_app: boolean;
+  notify_email: boolean;
+}
+
 export default function EditProfilePage() {
   const router = useRouter();
   const { resetTheme } = useTheme();
@@ -24,6 +29,9 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  const [notifyPrefs, setNotifyPrefs] = useState<NotifyPrefs>({ notify_in_app: true, notify_email: true });
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const [prefsMessage, setPrefsMessage] = useState('');
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -49,6 +57,10 @@ export default function EditProfilePage() {
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
           email: profile.email || '',
+        });
+        setNotifyPrefs({
+          notify_in_app: profile.notify_in_app ?? true,
+          notify_email: profile.notify_email ?? true,
         });
       } else {
         setIsError(true);
@@ -137,6 +149,28 @@ export default function EditProfilePage() {
 
   const inputClasses =
     'w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-gray-900 dark:text-white dark:bg-gray-700 outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100';
+
+  async function handleTogglePref(key: keyof NotifyPrefs) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    const updated = { ...notifyPrefs, [key]: !notifyPrefs[key] };
+    setNotifyPrefs(updated);
+    setIsSavingPrefs(true);
+    setPrefsMessage('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: updated[key] }),
+      });
+      if (res.status === 401) { handleUnauthorized(); return; }
+      setPrefsMessage(res.ok ? 'Preferences saved.' : 'Could not save preferences.');
+    } catch {
+      setPrefsMessage('Could not save preferences right now.');
+    } finally {
+      setIsSavingPrefs(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -244,6 +278,40 @@ export default function EditProfilePage() {
                 </Link>
               </div>
             </form>
+          )}
+        </section>
+
+        {/* Notification Preferences */}
+        <section className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Notification Preferences</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Choose how you want to be notified when a club posts an announcement.</p>
+          <div className="space-y-4">
+            {([
+              { key: 'notify_in_app' as const, label: 'In-app notifications', description: 'Show a bell badge in the header when new announcements are posted.' },
+              { key: 'notify_email' as const, label: 'Email notifications', description: 'Receive an email when a club you belong to posts an announcement.' },
+            ]).map(({ key, label, description }) => (
+              <div key={key} className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSavingPrefs}
+                  onClick={() => handleTogglePref(key)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${notifyPrefs[key] ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  aria-pressed={notifyPrefs[key]}
+                  aria-label={label}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out ${notifyPrefs[key] ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+          {prefsMessage && (
+            <p className="mt-4 text-sm font-semibold text-green-600 dark:text-green-400" aria-live="polite">{prefsMessage}</p>
           )}
         </section>
       </main>
