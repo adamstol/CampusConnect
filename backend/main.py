@@ -17,6 +17,7 @@ from event.event import Event
 from userevent.userevent import UserEvent
 from announcement.announcement import Announcement
 from admin.routes import admin_bp
+from upload.routes import upload_bp
 from flask_migrate import Migrate
 
 load_dotenv()
@@ -58,6 +59,7 @@ app.register_blueprint(club_bp)
 app.register_blueprint(event_bp)
 app.register_blueprint(announcement_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(upload_bp)
 
 # NOTE: Schema changes are now handled by Flask-Migrate (`flask db upgrade`),
 # run as a pre-deploy step on Render. db.create_all() is left here only as a
@@ -74,3 +76,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
