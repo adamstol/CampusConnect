@@ -686,6 +686,8 @@ export default function UserDashboardPage() {
                     <option value="fr">French</option>
                     <option value="de">German</option>
                     <option value="zh">Chinese</option>
+                    <option value="tl">Tagalog</option>
+                    <option value="ru">Russian</option>
                   </select>
                 </div>
 
