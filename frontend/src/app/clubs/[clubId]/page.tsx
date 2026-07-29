@@ -22,6 +22,7 @@ interface ClubEvent {
   description: string | null;
   event_date: string;
   location: string | null;
+  image_url: string | null;
 }
 
 interface Announcement {
@@ -390,6 +391,7 @@ export default function ClubDetailPage() {
                     title={event.event_name}
                     location={event.location || 'York University'}
                     date={formatEventDate(event.event_date)}
+                    imageUrl={event.image_url ?? undefined}
                   />
                   <div className="px-4 pb-4">
                     <button

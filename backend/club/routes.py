@@ -65,7 +65,7 @@ def get_club(club_id):
     if not club:
         return jsonify({'message': 'Club not found'}), 404
 
-    club_data = {'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description}
+    club_data = {'club_id': club.club_id, 'club_name': club.club_name, 'description': club.description, 'logo_url': club.logo_url}
     return jsonify(club_data), 200
 
 # Endpoint to update a club's information. This endpoint is accessible only to the club's Admin or Club Representative.
