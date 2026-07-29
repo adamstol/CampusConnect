@@ -9,4 +9,4 @@ gunicorn
 flask-mail
 Flask-Migrate
 pytest
-Flask-Migrate
+boto3
