@@ -146,6 +146,8 @@ def me():
         'last_name': user.last_name,
         'email': user.email,
         'role_name': user.role_name,
+        'notify_in_app': user.notify_in_app,
+        'notify_email': user.notify_email,
     }), 200
 
 # This Endpoint allows for authenticated users to update their profile information
@@ -173,6 +175,10 @@ def update_profile():
         user.email = data['email']
     if 'password' in data:
         user.password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    if 'notify_in_app' in data:
+        user.notify_in_app = bool(data['notify_in_app'])
+    if 'notify_email' in data:
+        user.notify_email = bool(data['notify_email'])
 
     db.session.commit()
     return jsonify({'message': 'Profile updated successfully'}), 200

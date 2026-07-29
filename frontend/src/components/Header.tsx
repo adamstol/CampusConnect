@@ -1,13 +1,73 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { API_BASE_URL } from '@/lib/api';
 
+interface AppNotification {
+  notification_id: number;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+  club_id: number | null;
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 export default function Header() {
   const [initials, setInitials] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  function fetchNotifications() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    fetch(`${API_BASE_URL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setNotifications(data))
+      .catch(() => {});
+  }
+
+  function openNotifications() {
+    setNotifOpen((prev) => !prev);
+    const token = localStorage.getItem('access_token');
+    if (!token || unreadCount === 0) return;
+    fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (res.ok) setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      })
+      .catch(() => {});
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -26,6 +86,11 @@ export default function Header() {
         }
       })
       .catch(() => {});
+
+    fetchNotifications();
+    // Poll every 60 seconds for new notifications
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
   }, []);
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
@@ -76,36 +141,96 @@ export default function Header() {
             {!initials && (
               <Link href="/login" className="hidden sm:block text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 font-medium">Sign Up Today</Link>
             )}
-            
-            <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-            
-            <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            
-            <div className="relative">
-              {initials ? (
-                <Link
-                  href="/user-dashboard"
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
-                  style={{ backgroundColor: '#FE3B5E' }}
+
+            {/* Notification Bell */}
+            {initials && (
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={openNotifications}
+                  className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Notifications"
                 >
-                  {initials}
-                </Link>
-              ) : (
-                <button className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-white text-[10px] font-bold leading-none" style={{ backgroundColor: '#FE3B5E' }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
-              )}
-            </div>
+
+                {notifOpen && (
+                  <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                      <span className="font-semibold text-gray-900 dark:text-white text-sm">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => {
+                            const token = localStorage.getItem('access_token');
+                            if (!token) return;
+                            fetch(`${API_BASE_URL}/notifications/read-all`, {
+                              method: 'PATCH',
+                              headers: { Authorization: `Bearer ${token}` },
+                            }).then((res) => {
+                              if (res.ok) setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+                            }).catch(() => {});
+                          }}
+                          className="text-xs font-medium hover:underline"
+                          style={{ color: '#FE3B5E' }}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <ul className="max-h-90 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                      {notifications.length === 0 ? (
+                        <li className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                          No notifications yet
+                        </li>
+                      ) : (
+                        notifications.map((n) => {
+                          const inner = (
+                            <>
+                              {!n.is_read && (
+                                <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r-full" style={{ backgroundColor: '#FE3B5E' }} />
+                              )}
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{n.title}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{n.body}</p>
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{timeAgo(n.created_at)}</p>
+                            </>
+                          );
+                          return (
+                            <li
+                              key={n.notification_id}
+                              className="relative px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              {n.club_id ? (
+                                <Link href={`/clubs/${n.club_id}`} onClick={() => setNotifOpen(false)} className="block">
+                                  {inner}
+                                </Link>
+                              ) : (
+                                <div>{inner}</div>
+                              )}
+                            </li>
+                          );
+                        })
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {initials && (
+              <Link
+                href="/user-dashboard"
+                className="flex items-center justify-center w-9 h-9 rounded-full text-white text-sm font-bold"
+                style={{ backgroundColor: '#FE3B5E' }}
+              >
+                {initials}
+              </Link>
+            )}
           </div>
         </div>
       </div>
