@@ -52,7 +52,7 @@ export default function ClubCard({ id, name, description, logoUrl, initialJoined
       });
       if (response.ok) setJoined(true);
     } catch {
-      // Network error — leave the button in its current state.
+      // Network error - leave the button in its current state.
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +69,7 @@ export default function ClubCard({ id, name, description, logoUrl, initialJoined
       });
       if (response.ok) setJoined(false);
     } catch {
-      // Network error — leave the button in its current state.
+      // Network error - leave the button in its current state.
     } finally {
       setIsSubmitting(false);
     }
