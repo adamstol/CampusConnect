@@ -5,9 +5,10 @@ interface EventCardProps {
   location: string;
   date: string;
   imageUrl?: string;
+  children?: React.ReactNode;
 }
 
-export default function EventCard({ title, location, date, imageUrl }: EventCardProps) {
+export default function EventCard({ title, location, date, imageUrl, children }: EventCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
@@ -36,6 +37,7 @@ export default function EventCard({ title, location, date, imageUrl }: EventCard
           </svg>
           <span>{date}</span>
         </div>
+        {children}
       </div>
     </div>
   );
