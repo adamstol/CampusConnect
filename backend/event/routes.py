@@ -294,6 +294,7 @@ def get_club_events(club_id):
         'description': event.description,
         'event_date': event.event_date.isoformat(),
         'location': event.location,
+        'image_url': event.image_url,
         'status': event.status
     } for event in events]
     return jsonify(events_data), 200
