@@ -5,21 +5,37 @@ on:
     branches: [master]
     paths:
       - 'backend/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'backend/**'
 
 jobs:
-  build-and-deploy:
+  test-build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
+      # 1. Build local Docker image for testing
+      - name: Build Docker image for testing
+        run: docker build -t backend-test ./backend
+
+      # 2. Run Pytest inside the test container
+      - name: Run Unit Tests
+        run: docker run backend-test pytest
+
+      # 3. Log in to DockerHub (Only on merge/push to master)
       - name: Log in to DockerHub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 4. Build and push production image (Only on merge/push to master)
       - name: Build and push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -28,5 +44,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/campusconnect-backend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/campusconnect-backend:${{ github.sha }}
 
+      # 5. Trigger Render deploy (Only on merge/push to master)
       - name: Trigger Render deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
