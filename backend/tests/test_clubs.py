@@ -4,6 +4,7 @@ from club.club import Club
 from extensions import db
 from userclub.userclub import UserClub
 from event.event import Event
+from auth.user import User
 
 @pytest.fixture
 def auth_headers(app):
@@ -119,11 +120,24 @@ def test_leave_club_removes_membership_tc009(client, auth_headers, seed_clubs, a
         assert membership is None
 
 @pytest.mark.rtm("S-05")
-def test_submit_club_application_tc011(client, auth_headers):
+def test_submit_club_application_tc011(client, auth_headers, app):
     """
     TC-011 (S-05): Submit new club application with valid details
     Requirement: 201 Created response and club record created upon submission.
     """
+    # Seed authorized user with all required non-nullable fields
+    with app.app_context():
+        user = User(
+            user_id=1,
+            first_name="Test",
+            last_name="Admin",
+            email="admin_tc011@test.com",
+            password="hashed_password_123",
+            role_name="Administrator"
+        )
+        db.session.add(user)
+        db.session.commit()
+
     payload = {
         "club_name": "Robotics Club",
         "description": "Building autonomous robots and competing in intercollegiate leagues."
@@ -141,12 +155,26 @@ def test_submit_club_application_tc011(client, auth_headers):
     assert data.get("message") == "Club application submitted successfully, pending administrator approval"
     assert "club_id" in data
 
+
 @pytest.mark.rtm("S-05")
-def test_submit_duplicate_club_application_tc012(client, auth_headers):
+def test_submit_duplicate_club_application_tc012(client, auth_headers, app):
     """
     TC-012 (S-05): Submitting a duplicate/conflicting club application
     Requirement: 400 Bad Request when attempting to create a club with an existing name.
     """
+    # Seed authorized user with all required non-nullable fields
+    with app.app_context():
+        user = User(
+            user_id=1,
+            first_name="Test",
+            last_name="Admin",
+            email="admin_tc012@test.com",
+            password="hashed_password_123",
+            role_name="Administrator"
+        )
+        db.session.add(user)
+        db.session.commit()
+
     payload = {
         "club_name": "Chess Club",
         "description": "A club for strategy and chess lovers."
@@ -163,7 +191,7 @@ def test_submit_duplicate_club_application_tc012(client, auth_headers):
     # 3. Assert error message
     data = second_res.get_json()
     assert data.get("message") == "Club name already exists"
-
+    
 @pytest.mark.rtm("S-06")
 def test_get_club_details_tc013(client, seed_clubs):
     """
