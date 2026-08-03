@@ -4,6 +4,7 @@ from flask_jwt_extended import create_access_token
 from auth.user import User
 from extensions import mail
 
+@pytest.mark.skip(reason="Requires mail configuration not available in CI")
 @pytest.mark.rtm("S-01")
 def test_register_new_user_valid_details(client, app):
     """
